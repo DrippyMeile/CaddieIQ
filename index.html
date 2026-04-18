@@ -469,7 +469,7 @@ function mkHole(i){
   // tee section
   if(!p3){
     el.appendChild(div());
-    el.appendChild(mkSec(i,'Tee club',['Driver','3 Wood','Hybrid','Iron','Lay-up'],'teeClub','on'));
+    el.appendChild(mkSec(i,'Tee club',['Driver','3 Wood','Hybrid','Iron'],'teeClub','on'));
     el.appendChild(mkTeeRes(i));
   }
 
@@ -506,7 +506,7 @@ function mkTeeRes(i){
   const h=hd[i];const w=document.createElement('div');
   const l=document.createElement('span');l.className='fll';l.textContent='Tee result';w.appendChild(l);
   const r=document.createElement('div');r.className='tbr';
-  [{v:'fairway',c:'g'},{v:'Rough L',c:'a'},{v:'Rough R',c:'a'},{v:'Bunker',c:'a'},{v:'OB',c:'r'},{v:'Water',c:'r'}].forEach(o=>{
+  [{v:'Fairway',c:'g'},{v:'Rough Left',c:'a'},{v:'Rough Right',c:'a'},{v:'Bunker',c:'a'},{v:'OB',c:'r'},{v:'Water',c:'r'}].forEach(o=>{
     const b=document.createElement('button');
     b.className='tb'+(h.teeMiss===o.v?' '+o.c:'');
     b.textContent=o.v;b.dataset.action='str';b.dataset.i=i;b.dataset.val=o.v;b.dataset.cls=o.c;
@@ -530,7 +530,6 @@ function mkApDist(i){
     w.appendChild(r1);
 
     if(h.par5GoForIt===true){
-      // Going for green in 2 — show approach distance from that shot
       const l2=document.createElement('span');l2.className='fll';l2.textContent='Approach distance (2nd shot)';w.appendChild(l2);
       const r2=document.createElement('div');r2.className='tbr';
       [['100–150m','100-150'],['150–200m','150-200'],['>200m','>200']].forEach(([lb,v])=>{
@@ -541,18 +540,8 @@ function mkApDist(i){
       });
       w.appendChild(r2);
     } else if(h.par5GoForIt===false){
-      // Lay-up — show lay-up landing distance, then approach distance
-      const l2=document.createElement('span');l2.className='fll';l2.textContent='Lay-up distance from green';w.appendChild(l2);
-      const r2=document.createElement('div');r2.className='tbr';
-      [['<50m','<50'],['50–100m','50-100'],['100–150m','100-150']].forEach(([lb,v])=>{
-        const b=document.createElement('button');
-        b.className='tb'+(h.layupDist===v?' b':'');
-        b.textContent=lb;b.dataset.action='slayup';b.dataset.i=i;b.dataset.val=v;
-        r2.appendChild(b);
-      });
-      w.appendChild(r2);
-      // Approach after lay-up
-      const l3=document.createElement('span');l3.className='fll';l3.textContent='Approach distance (3rd shot)';w.appendChild(l3);
+      // Lay-up — just show approach distance from 3rd shot, no lay-up distance needed
+      const l3=document.createElement('span');l3.className='fll';l3.textContent='Approach distance (3rd shot after lay-up)';w.appendChild(l3);
       const r3=document.createElement('div');r3.className='tbr';
       [['<50m','<50'],['50–100m','50-100'],['100–150m','100-150']].forEach(([lb,v])=>{
         const b=document.createElement('button');
@@ -712,67 +701,56 @@ function calcAutoScore(h){
   // so next stroke is stroke 3 (stroke 1 + stroke 2 re-tee + penalty counted).
   // We track this simply: every penalty stroke means the player used an extra stroke.
 
-  let s=0; // strokes used so far
+function calcAutoScore(h){
+  const pen=h.penalty||0;
+  let s=0;
 
   if(h.par===3){
-    // Tee shot IS the approach
-    s=1+pen; // tee + any penalty strokes
+    s=1+pen;
     if(h.approachResult==='Green'||h.gir){
-      if(h.holedOut) return s; // ace or holed approach
+      if(h.holedOut)return s;
       s+=h.putts;
     } else if(h.approachResult){
-      if(h.holedOut) return s+1; // holed the chip
-      s+=1+h.putts; // 1 short game + putts
-    } else {
-      return null;
-    }
+      if(h.holedOut)return s+1;
+      s+=1+h.putts;
+    } else return null;
 
   } else if(h.par===4){
-    s=1; // tee shot
-    // Penalty on tee shot (OB/water)
-    if(h.teeMiss==='OB'||h.teeMiss==='Water') s+=pen;
-    s+=1; // approach shot
+    s=1;
+    if(h.teeMiss==='OB'||h.teeMiss==='Water')s+=pen;
+    s+=1; // approach
     if(h.approachResult==='Green'||h.gir){
       s+=h.putts;
     } else if(h.approachResult){
-      if(h.holedOut) return s+1;
+      if(h.holedOut)return s+1;
       s+=1+h.putts;
-    } else {
-      return null;
-    }
+    } else return null;
+    if(h.teeMiss!=='OB'&&h.teeMiss!=='Water')s+=pen;
 
   } else if(h.par===5){
-    if(h.par5GoForIt===null) return null;
-    s=1; // tee shot
-    if(h.teeMiss==='OB'||h.teeMiss==='Water') s+=pen;
-
+    if(h.par5GoForIt===null)return null;
+    s=1;
+    if(h.teeMiss==='OB'||h.teeMiss==='Water')s+=pen;
     if(h.par5GoForIt===true){
-      s+=1; // approach shot (going for green in 2)
+      s+=1; // 2nd shot approach
       if(h.approachResult==='Green'||h.gir){
         s+=h.putts;
       } else if(h.approachResult){
-        if(h.holedOut) return s+1;
+        if(h.holedOut)return s+1;
         s+=1+h.putts;
-      } else {
-        return null;
-      }
+      } else return null;
     } else {
-      // Lay-up
-      s+=1; // lay-up shot
-      s+=1; // approach shot (3rd shot)
+      s+=1; // lay-up (2nd shot)
+      s+=1; // approach (3rd shot)
       if(h.approachResult==='Green'||h.gir){
         s+=h.putts;
       } else if(h.approachResult){
-        if(h.holedOut) return s+1;
+        if(h.holedOut)return s+1;
         s+=1+h.putts;
-      } else {
-        return null;
-      }
+      } else return null;
     }
-    // Water/OB on approach or lay-up (non-tee penalty)
-    if(h.teeMiss!=='OB'&&h.teeMiss!=='Water') s+=pen;
+    if(h.teeMiss!=='OB'&&h.teeMiss!=='Water')s+=pen;
   }
-
   return Math.max(1,s);
 }
 
@@ -826,7 +804,7 @@ function buildSummary(){
   const tot=hd.reduce((s,h)=>s+h.score,0),totPar=hd.reduce((s,h)=>s+h.par,0);
   const putts=hd.reduce((s,h)=>s+h.putts,0);
   const gir=hd.filter(h=>h.gir).length,girPlus=hd.filter(h=>h.girPlus).length;
-  const fir=hd.filter(h=>h.par>3&&h.teeMiss==='fairway').length,firTot=hd.filter(h=>h.par>3).length;
+  const fir=hd.filter(h=>h.par>3&&h.teeMiss==='Fairway').length,firTot=hd.filter(h=>h.par>3).length;
   const diff=tot-totPar,t=calcTiger(hd);
   const cats={eagle:0,birdie:0,par:0,bogey:0,dbl:0};
   hd.forEach(h=>{const d=h.score-h.par;if(d<=-2)cats.eagle++;else if(d===-1)cats.birdie++;else if(d===0)cats.par++;else if(d===1)cats.bogey++;else cats.dbl++;});
@@ -881,7 +859,7 @@ async function saveRound(){
   const tot=hd.reduce((s,h)=>s+h.score,0),totPar=hd.reduce((s,h)=>s+h.par,0);
   const putts=hd.reduce((s,h)=>s+h.putts,0);
   const gir=hd.filter(h=>h.gir).length,girPlus=hd.filter(h=>h.girPlus).length;
-  const fir=hd.filter(h=>h.par>3&&h.teeMiss==='fairway').length,firTot=hd.filter(h=>h.par>3).length;
+  const fir=hd.filter(h=>h.par>3&&h.teeMiss==='Fairway').length,firTot=hd.filter(h=>h.par>3).length;
   const tiger=calcTiger(hd);
   const cats={eagle:0,birdie:0,par:0,bogey:0,dbl:0};
   hd.forEach(h=>{const d=h.score-h.par;if(d<=-2)cats.eagle++;else if(d===-1)cats.birdie++;else if(d===0)cats.par++;else if(d===1)cats.bogey++;else cats.dbl++;});
@@ -1129,68 +1107,210 @@ function renderStats(){
   document.getElementById('stats-loading').style.display='none';
   document.getElementById('stats-content').style.display='block';
   if(!rounds.length){document.getElementById('stats-content').innerHTML='<div class="es"><h3>No data yet</h3></div>';return;}
-  const all=rounds.flatMap(r=>r.holes||[]),rn=rounds.length;
-  // course filter
   const courses=[...new Set(rounds.map(r=>r.course))];
-  const hasCourseFilter=courses.length>1;
-  let filterCourse=window._statsCourse||'all';
+  const hasCF=courses.length>1;
+  let fc=window._statsCourse||'all';
 
-  function renderStatsFor(fc){
+  function rsFor(fc){
     window._statsCourse=fc;
-    const filtRounds=fc==='all'?rounds:rounds.filter(r=>r.course===fc);
-    const filtAll=filtRounds.flatMap(r=>r.holes||[]);
-    const frn=filtRounds.length;
-    if(!frn){document.getElementById('stats-inner').innerHTML='<div class="es"><h3>No rounds for this course</h3></div>';return;}
-    const p3=filtAll.filter(h=>h.par===3),p4=filtAll.filter(h=>h.par===4),p5=filtAll.filter(h=>h.par===5);
-    const aA=h=>h.length?(h.reduce((s,x)=>s+(x.score-x.par),0)/h.length).toFixed(2):'-';
-    const aG=h=>h.length?Math.round(h.filter(x=>x.gir).length/h.length*100)+'%':'-';
-    const appR=['<50','50-100','100-150','>150'].map((d,i)=>{const ah=filtAll.filter(h=>h.approachDist===d);const gH=ah.filter(h=>h.gir).length,bH=ah.filter(h=>h.gir&&h.score-h.par<=-1).length;const gP=ah.length?Math.round(gH/ah.length*100):0,bP=gH?Math.round(bH/gH*100):0;return ah.length?`<div class="sr"><span class="sl2">${['<50m','50–100m','100–150m','>150m'][i]} (${ah.length} holes)</span><span class="sv">${gP}% GIR · ${bP}% birdie conv.</span></div>`:''}).join('');
+    const fr=fc==='all'?rounds:rounds.filter(r=>r.course===fc);
+    const fa=fr.flatMap(r=>r.holes||[]);
+    const frn=fr.length;
+    if(!frn){document.getElementById('si').innerHTML='<div class="es"><h3>No rounds for this course</h3></div>';return;}
+
+    const p3=fa.filter(h=>h.par===3),p4=fa.filter(h=>h.par===4),p5=fa.filter(h=>h.par===5);
+    const aA=h=>h.length?+(h.reduce((s,x)=>s+(x.score-x.par),0)/h.length).toFixed(2):null;
+    const aG=h=>h.length?Math.round(h.filter(x=>x.gir).length/h.length*100):0;
+    const birdies=fa.filter(h=>h.score-h.par<=-1).length;
+    const bogeys=fa.filter(h=>h.score-h.par===1).length;
+    const doubles=fa.filter(h=>h.score-h.par>=2).length;
+    const pars=fa.filter(h=>h.score-h.par===0).length;
+    const eagles=fa.filter(h=>h.score-h.par<=-2).length;
+    const scr=fa.filter(h=>!h.gir),ud=scr.filter(h=>h.upAndDown===true||h.holedOut).length;
+    const bb=fr.reduce((s,r)=>s+(r.tiger?.bb||0),0);
+    const gH=fa.filter(h=>h.gir);
+    const p3p=fa.filter(h=>h.putts>=3).length;
+    const girFw=fa.filter(h=>h.par>3&&h.teeMiss==='Fairway'&&h.gir).length;
+    const girRough=fa.filter(h=>h.par>3&&(h.teeMiss==='Rough Left'||h.teeMiss==='Rough Right')&&h.gir).length;
+    const fwHoles=fa.filter(h=>h.par>3&&h.teeMiss==='Fairway').length;
+    const roughHoles=fa.filter(h=>h.par>3&&(h.teeMiss==='Rough Left'||h.teeMiss==='Rough Right')).length;
+    // Par 5 go-for-it stats
+    const p5gfi=p5.filter(h=>h.par5GoForIt===true);
+    const p5layup=p5.filter(h=>h.par5GoForIt===false);
+    const p5gfiAvg=p5gfi.length?+(p5gfi.reduce((s,h)=>s+(h.score-h.par),0)/p5gfi.length).toFixed(2):null;
+    const p5layupAvg=p5layup.length?+(p5layup.reduce((s,h)=>s+(h.score-h.par),0)/p5layup.length).toFixed(2):null;
+    // Approach distances
+    const appDists=['<50','50-100','100-150','100-150','150-200','>150','>200'];
+    const allDists=[...'<50,50-100,100-150,150-200,>200'.split(',')];
+    const appData=allDists.map(d=>{
+      const ah=fa.filter(h=>h.approachDist===d);
+      const gH2=ah.filter(h=>h.gir).length;
+      const bH=ah.filter(h=>h.gir&&h.score-h.par<=-1).length;
+      return{dist:d,n:ah.length,girPct:ah.length?Math.round(gH2/ah.length*100):0,birdPct:gH2?Math.round(bH/gH2*100):0};
+    }).filter(d=>d.n>0);
+    // Miss direction
     const md={Left:0,Right:0,Short:0,Long:0,Bunker:0,Water:0};
-    filtAll.filter(h=>h.approachResult&&h.approachResult!=='Green').forEach(h=>md[h.approachResult]=(md[h.approachResult]||0)+1);
+    fa.filter(h=>h.approachResult&&h.approachResult!=='Green').forEach(h=>md[h.approachResult]=(md[h.approachResult]||0)+1);
     const mk=Object.keys(md).filter(k=>md[k]>0);
-    const tr={fairway:0,'Rough L':0,'Rough R':0,Bunker:0,OB:0,Water:0};
-    filtAll.filter(h=>h.par>3&&h.teeMiss).forEach(h=>tr[h.teeMiss]=(tr[h.teeMiss]||0)+1);
+    // Tee results
+    const tr={Fairway:0,'Rough Left':0,'Rough Right':0,Bunker:0,OB:0,Water:0};
+    fa.filter(h=>h.par>3&&h.teeMiss).forEach(h=>tr[h.teeMiss]=(tr[h.teeMiss]||0)+1);
     const tk=Object.keys(tr).filter(k=>tr[k]>0);
-    const birdies=filtAll.filter(h=>h.score-h.par<=-1).length,bogeys=filtAll.filter(h=>h.score-h.par===1).length;
-    const scr=filtAll.filter(h=>!h.gir),ud=scr.filter(h=>h.upAndDown===true||h.holedOut).length;
-    const bb=filtRounds.reduce((s,r)=>s+(r.tiger?.bb||0),0);
-    const gH=filtAll.filter(h=>h.gir),p3p=filtAll.filter(h=>h.putts>=3).length;
-    const pmRows=PD.map(d=>{const ph=filtAll.filter(h=>h.firstPuttDist===d),made=ph.filter(h=>h.putts===1).length,pct=ph.length?Math.round(made/ph.length*100):0,bc=pct>=80?'#3B6D11':pct>=50?'#378ADD':'#BA7517';return ph.length?`<div class="br2"><span class="bl">${d}</span><div class="bt"><div class="bf" style="width:${pct}%;background:${bc}"></div></div><span class="bv">${made}/${ph.length} (${pct}%)</span></div>`:''}).join('');
-    const avgScore=frn?filtRounds.reduce((s,r)=>s+r.score,0)/frn:0;
+    const teeTot=tk.reduce((s,k)=>s+tr[k],0);
+    // Putt make %
+    const pmData=PD.map(d=>{const ph=fa.filter(h=>h.firstPuttDist===d),made=ph.filter(h=>h.putts===1).length;return{d,n:ph.length,made,pct:ph.length?Math.round(made/ph.length*100):0};}).filter(d=>d.n>0);
+    // HCP trend
+    const hcpTrend=fr.filter(r=>r.new_handicap).reverse().map(r=>({date:r.date,hcp:r.new_handicap,course:r.course}));
+
     destroyCharts();
-    document.getElementById('stats-inner').innerHTML=`
-      ${frn>=2?`<span class="sl">Score trend${fc!=='all'?' — '+fc:''}</span><div class="card"><div style="position:relative;height:160px"><canvas id="sc2" role="img" aria-label="Score trend">Trend</canvas></div></div>`:''}
-      <span class="sl">Par type analysis</span>
-      <div class="card">
-        <div class="sr"><span class="sl2">Par 3 (${p3.length} holes)</span><span class="sv">Avg ${aA(p3)} · GIR ${aG(p3)}</span></div>
-        <div class="sr"><span class="sl2">Par 4 (${p4.length} holes)</span><span class="sv">Avg ${aA(p4)} · GIR ${aG(p4)}</span></div>
-        <div class="sr"><span class="sl2">Par 5 (${p5.length} holes)</span><span class="sv">Avg ${aA(p5)} · GIR ${aG(p5)}</span></div>
-        <div class="sr"><span class="sl2">Birdie/Bogey ratio</span><span class="sv">${bogeys>0?(birdies/bogeys).toFixed(2):birdies>0?'∞':'—'} (${birdies}/${bogeys})</span></div>
-        <div class="sr"><span class="sl2">Scrambling %</span><span class="sv">${scr.length?Math.round(ud/scr.length*100):0}% (${ud}/${scr.length})</span></div>
-        <div class="sr"><span class="sl2">Bounce back %</span><span class="sv">${bogeys>0?Math.round(bb/bogeys*100):0}% (${bb}/${bogeys})</span></div>
-        <div class="sr"><span class="sl2">Putts per GIR hole</span><span class="sv">${gH.length?(gH.reduce((s,h)=>s+h.putts,0)/gH.length).toFixed(2):'—'}</span></div>
-        <div class="sr"><span class="sl2">3-putt %</span><span class="sv">${filtAll.length?Math.round(p3p/filtAll.length*100):0}% (${p3p}/${filtAll.length})</span></div>
+    document.getElementById('si').innerHTML=`
+
+      <div class="g4" style="margin-bottom:20px">
+        <div class="m"><div class="mv">${fr.reduce((s,r)=>s+r.score,0)/frn|0}</div><div class="ml">Avg score</div></div>
+        <div class="m"><div class="mv">${Math.round(fr.reduce((s,r)=>s+r.putts,0)/frn*10)/10}</div><div class="ml">Avg putts</div></div>
+        <div class="m"><div class="mv">${Math.round(fr.reduce((s,r)=>s+r.gir,0)/frn)}/18</div><div class="ml">Avg GIR</div></div>
+        <div class="m"><div class="mv">${fwHoles>0?Math.round(tr.Fairway/fwHoles*100):0}%</div><div class="ml">FIR %</div></div>
+        <div class="m"><div class="mv">${bogeys>0?(birdies/bogeys).toFixed(2):birdies>0?'∞':'—'}</div><div class="ml">Birdie/Bogey</div></div>
+        <div class="m"><div class="mv">${scr.length?Math.round(ud/scr.length*100):0}%</div><div class="ml">Scrambling %</div></div>
+        <div class="m"><div class="mv">${bogeys>0?Math.round(bb/bogeys*100):0}%</div><div class="ml">Bounce back %</div></div>
+        <div class="m"><div class="mv">${gH.length?(gH.reduce((s,h)=>s+h.putts,0)/gH.length).toFixed(2):'—'}</div><div class="ml">Putts/GIR</div></div>
       </div>
-      <span class="sl">Approach by distance</span>
-      <div class="card">${appR||'<span style="color:#999;font-size:13px">No approach data yet</span>'}</div>
-      ${pmRows?`<span class="sl">Putt make % by first putt distance</span><div class="card">${pmRows}</div>`:''}
-      ${mk.length?`<span class="sl">Approach miss direction</span><div class="card"><div style="position:relative;height:${mk.length*44+60}px"><canvas id="mc" role="img" aria-label="Miss direction">Miss</canvas></div></div>`:''}
-      ${tk.length?`<span class="sl">Tee shot results</span><div class="card"><div style="position:relative;height:${tk.length*44+60}px"><canvas id="tec" role="img" aria-label="Tee results">Tee</canvas></div></div>`:''}`;
+
+      <div class="g2" style="margin-bottom:16px">
+        <div class="card" style="margin:0">
+          <div class="ct">Score distribution</div>
+          <div style="display:flex;justify-content:center"><div style="position:relative;width:180px;height:180px"><canvas id="sc-donut" role="img" aria-label="Score distribution">Scoring</canvas></div></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px;font-size:11px">
+            ${eagles?`<span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#185FA5;display:inline-block"></span>Eagle ${eagles}</span>`:''}
+            <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#3B6D11;display:inline-block"></span>Birdie ${birdies}</span>
+            <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#888;display:inline-block"></span>Par ${pars}</span>
+            <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#BA7517;display:inline-block"></span>Bogey ${bogeys}</span>
+            <span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#A32D2D;display:inline-block"></span>Double+ ${doubles}</span>
+          </div>
+        </div>
+        <div class="card" style="margin:0">
+          <div class="ct">Par type — avg to par</div>
+          <div style="position:relative;height:180px"><canvas id="par-bars" role="img" aria-label="Par type average">Par type</canvas></div>
+        </div>
+      </div>
+
+      ${frn>=2?`<span class="sl">Score trend${fc!=='all'?' — '+fc:''}</span>
+      <div class="card"><div style="position:relative;height:160px"><canvas id="sc2" role="img" aria-label="Score trend">Trend</canvas></div></div>`:''}
+
+      ${hcpTrend.length>=2?`<span class="sl">Handicap trend</span>
+      <div class="card"><div style="position:relative;height:140px"><canvas id="hcp-trend" role="img" aria-label="Handicap trend">HCP</canvas></div></div>`:''}
+
+      <span class="sl">Tee shots — ${teeTot} recorded</span>
+      <div class="card" style="padding-bottom:10px">
+        ${tk.length?`<div style="position:relative;height:${Math.max(160,tk.length*44+60)}px"><canvas id="tec" role="img" aria-label="Tee shot results">Tee</canvas></div>`:'<span style="color:#999;font-size:13px">No tee data yet</span>'}
+        ${fwHoles>0&&roughHoles>0?`<div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px">
+          <div class="sr"><span class="sl2">GIR % from Fairway</span><span class="sv good">${Math.round(girFw/fwHoles*100)}% (${girFw}/${fwHoles})</span></div>
+          <div class="sr"><span class="sl2">GIR % from Rough</span><span class="sv warn">${Math.round(girRough/roughHoles*100)}% (${girRough}/${roughHoles})</span></div>
+        </div>`:''}
+      </div>
+
+      <span class="sl">Approach — GIR % & birdie conversion by distance</span>
+      <div class="card" style="padding-bottom:10px">
+        ${appData.length?`<div style="position:relative;height:${Math.max(160,appData.length*50+60)}px"><canvas id="app-chart" role="img" aria-label="Approach by distance">Approach</canvas></div>`:'<span style="color:#999;font-size:13px">No approach data yet</span>'}
+      </div>
+
+      <span class="sl">Approach miss direction</span>
+      <div class="card" style="padding-bottom:10px">
+        ${mk.length?`<div style="position:relative;height:${Math.max(140,mk.length*44+60)}px"><canvas id="mc" role="img" aria-label="Miss direction">Miss</canvas></div>`:'<span style="color:#999;font-size:13px">No miss data yet</span>'}
+      </div>
+
+      ${pmData.length?`<span class="sl">Putting — make % by first putt distance</span>
+      <div class="card" style="padding-bottom:10px">
+        <div style="position:relative;height:${Math.max(160,pmData.length*44+60)}px"><canvas id="putt-chart" role="img" aria-label="Putt make %">Putts</canvas></div>
+        <div style="border-top:1px solid var(--border);margin-top:12px;padding-top:12px">
+          <div class="sr"><span class="sl2">3-putt rate</span><span class="sv ${p3p/fa.length>0.05?'bad':'good'}">${fa.length?Math.round(p3p/fa.length*100):0}% (${p3p}/${fa.length} holes)</span></div>
+          <div class="sr"><span class="sl2">Putts per GIR hole</span><span class="sv">${gH.length?(gH.reduce((s,h)=>s+h.putts,0)/gH.length).toFixed(2):'—'}</span></div>
+        </div>
+      </div>`:''}
+
+      ${p5gfi.length||p5layup.length?`<span class="sl">Par 5 strategy — go for it vs lay-up</span>
+      <div class="card">
+        ${p5gfi.length?`<div class="sr"><span class="sl2">Went for green in 2 (${p5gfi.length} holes)</span><span class="sv ${p5gfiAvg<=0?'good':'bad'}">Avg ${p5gfiAvg>0?'+':''}${p5gfiAvg} to par</span></div>`:''}
+        ${p5layup.length?`<div class="sr"><span class="sl2">Laid up (${p5layup.length} holes)</span><span class="sv ${p5layupAvg<=0?'good':'bad'}">Avg ${p5layupAvg>0?'+':''}${p5layupAvg} to par</span></div>`:''}
+        ${p5gfi.length&&p5layup.length?`<div class="sr"><span class="sl2">Better strategy</span><span class="sv">${p5gfiAvg<=p5layupAvg?'Going for it pays off':'Laying up works better for you'}</span></div>`:''}
+      </div>`:''}`;
+
     setTimeout(()=>{
-      if(frn>=2){const rev=[...filtRounds].reverse();charts['s2']=new Chart(document.getElementById('sc2'),{type:'line',data:{labels:rev.map((r,i)=>r.date?new Date(r.date).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'R'+(i+1)),datasets:[{label:'Score to par',data:rev.map(r=>r.score-r.par),borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,.08)',fill:true,tension:.35,pointRadius:4,pointBackgroundColor:'#378ADD'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#999',callback:v=>(v>0?'+':'')+v}},x:{grid:{display:false},ticks:{color:'#999',font:{size:11},autoSkip:false,maxRotation:45}}}}});}
-      if(mk.length){charts['m']=new Chart(document.getElementById('mc'),{type:'bar',data:{labels:mk,datasets:[{label:'Miss',data:mk.map(k=>md[k]),backgroundColor:'#E24B4A',borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#999'}},y:{grid:{display:false},ticks:{color:'#555',font:{size:12}}}}}});}
-      if(tk.length){const tc2={fairway:'#3B6D11','Rough L':'#BA7517','Rough R':'#BA7517',Bunker:'#E24B4A',OB:'#A32D2D',Water:'#185FA5'};charts['te']=new Chart(document.getElementById('tec'),{type:'bar',data:{labels:tk,datasets:[{label:'Tee',data:tk.map(k=>tr[k]),backgroundColor:tk.map(k=>tc2[k]||'#888'),borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#999'}},y:{grid:{display:false},ticks:{color:'#555',font:{size:12}}}}}});}
+      // Score donut
+      const donutData=[eagles,birdies,pars,bogeys,doubles].filter((_,i)=>i>0||eagles>0);
+      const donutLabels=['Eagle','Birdie','Par','Bogey','Double+'].filter((_,i)=>i>0||eagles>0);
+      const donutColors=['#185FA5','#3B6D11','#888','#BA7517','#A32D2D'].filter((_,i)=>i>0||eagles>0);
+      if(document.getElementById('sc-donut'))
+        charts['dnt']=new Chart(document.getElementById('sc-donut'),{type:'doughnut',data:{labels:donutLabels,datasets:[{data:[eagles,birdies,pars,bogeys,doubles],backgroundColor:donutColors,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:false}}}});
+
+      // Par type bars
+      if(document.getElementById('par-bars')){
+        const ptData=[aA(p3),aA(p4),aA(p5)].map(v=>v??0);
+        charts['pb']=new Chart(document.getElementById('par-bars'),{type:'bar',data:{labels:['Par 3','Par 4','Par 5'],datasets:[{data:ptData,backgroundColor:ptData.map(v=>v<=0?'#3B6D11':v<=1?'#BA7517':'#A32D2D'),borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#999',callback:v=>(v>0?'+':'')+v}},x:{grid:{display:false},ticks:{color:'#555',font:{size:12}}}}}});
+      }
+
+      // Score trend
+      if(frn>=2&&document.getElementById('sc2')){
+        const rev=[...fr].reverse();
+        charts['s2']=new Chart(document.getElementById('sc2'),{type:'line',data:{labels:rev.map((r,i)=>r.date?new Date(r.date).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'R'+(i+1)),datasets:[{label:'Score to par',data:rev.map(r=>r.score-r.par),borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,.08)',fill:true,tension:.35,pointRadius:4,pointBackgroundColor:'#378ADD'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#999',callback:v=>(v>0?'+':'')+v}},x:{grid:{display:false},ticks:{color:'#999',font:{size:11},autoSkip:false,maxRotation:45}}}}});
+      }
+
+      // HCP trend
+      if(hcpTrend.length>=2&&document.getElementById('hcp-trend')){
+        charts['hcp']=new Chart(document.getElementById('hcp-trend'),{type:'line',data:{labels:hcpTrend.map(r=>r.date?new Date(r.date).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):''),datasets:[{label:'HCP',data:hcpTrend.map(r=>r.hcp),borderColor:'#7F77DD',backgroundColor:'rgba(127,119,221,.08)',fill:true,tension:.4,pointRadius:3,pointBackgroundColor:'#7F77DD'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{reverse:true,grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#999'}},x:{grid:{display:false},ticks:{color:'#999',font:{size:11},autoSkip:false,maxRotation:45}}}}});
+      }
+
+      // Tee shot results
+      if(tk.length&&document.getElementById('tec')){
+        const tc2={Fairway:'#3B6D11','Rough Left':'#BA7517','Rough Right':'#BA7517',Bunker:'#E24B4A',OB:'#A32D2D',Water:'#185FA5'};
+        charts['te']=new Chart(document.getElementById('tec'),{type:'bar',data:{labels:tk,datasets:[{label:'Shots',data:tk.map(k=>tr[k]),backgroundColor:tk.map(k=>tc2[k]||'#888'),borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#999',stepSize:1}},y:{grid:{display:false},ticks:{color:'#555',font:{size:12}}}}}});
+      }
+
+      // Approach chart — grouped GIR% and birdie%
+      if(appData.length&&document.getElementById('app-chart')){
+        charts['app']=new Chart(document.getElementById('app-chart'),{type:'bar',data:{
+          labels:appData.map(d=>d.dist+'m ('+d.n+')'),
+          datasets:[
+            {label:'GIR %',data:appData.map(d=>d.girPct),backgroundColor:'#378ADD',borderRadius:4,barThickness:14},
+            {label:'Birdie conv. %',data:appData.map(d=>d.birdPct),backgroundColor:'#3B6D11',borderRadius:4,barThickness:14}
+          ]
+        },options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{min:0,max:100,grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#999',callback:v=>v+'%'}},y:{grid:{display:false},ticks:{color:'#555',font:{size:11}}}}}});
+      }
+
+      // Miss direction
+      if(mk.length&&document.getElementById('mc')){
+        charts['m']=new Chart(document.getElementById('mc'),{type:'bar',data:{labels:mk,datasets:[{label:'Miss',data:mk.map(k=>md[k]),backgroundColor:'#E24B4A',borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#999',stepSize:1}},y:{grid:{display:false},ticks:{color:'#555',font:{size:12}}}}}});
+      }
+
+      // Putt make %
+      if(pmData.length&&document.getElementById('putt-chart')){
+        charts['pm']=new Chart(document.getElementById('putt-chart'),{type:'bar',data:{
+          labels:pmData.map(d=>d.d),
+          datasets:[{label:'Make %',data:pmData.map(d=>d.pct),backgroundColor:pmData.map(d=>d.pct>=80?'#3B6D11':d.pct>=50?'#378ADD':'#BA7517'),borderRadius:4}]
+        },options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{min:0,max:100,grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#999',callback:v=>v+'%'}},y:{grid:{display:false},ticks:{color:'#555',font:{size:11}}}}}});
+      }
+
+      // Legend for approach
+      if(appData.length){
+        const el=document.getElementById('app-chart');
+        if(el&&el.parentElement){
+          const leg=document.createElement('div');
+          leg.style.cssText='display:flex;gap:14px;margin-top:8px;font-size:11px;color:#999';
+          leg.innerHTML='<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#378ADD;margin-right:4px"></span>GIR %</span><span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#3B6D11;margin-right:4px"></span>Birdie conversion %</span>';
+          el.parentElement.appendChild(leg);
+        }
+      }
     },50);
   }
 
-  const filterHTML=hasCourseFilter?`<div style="margin-bottom:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+  const filterHTML=hasCF?`<div style="margin-bottom:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
     <span style="font-size:12px;color:#999">Filter by course:</span>
-    <button class="tb${filterCourse==='all'?' g':''}" onclick="window._statsCourse='all';renderStatsInner()">All courses</button>
-    ${courses.map(c=>`<button class="tb${filterCourse===c?' g':''}" onclick="window._statsCourse='${c}';renderStatsInner()">${c.replace('The Scandinavian — ','')}</button>`).join('')}
+    <button class="tb${fc==='all'?' g':''}" onclick="window._statsCourse='all';renderStatsInner()">All courses</button>
+    ${courses.map(c=>`<button class="tb${fc===c?' g':''}" onclick="window._statsCourse='${c}';renderStatsInner()">${c.replace('The Scandinavian — ','')}</button>`).join('')}
   </div>`:'';
-  document.getElementById('stats-content').innerHTML=filterHTML+'<div id="stats-inner"></div>';
-  window.renderStatsInner=()=>renderStatsFor(window._statsCourse||'all');
-  renderStatsFor(filterCourse);
+  document.getElementById('stats-content').innerHTML=filterHTML+'<div id="si"></div>';
+  window.renderStatsInner=()=>rsFor(window._statsCourse||'all');
+  rsFor(fc);
 }
 
 // ── TIGER VIEW ────────────────────────────────────────────────────────────────
