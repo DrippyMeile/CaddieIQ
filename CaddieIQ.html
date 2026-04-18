@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CaddieIQ</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ffffff;--bg2:#f8f7f4;--bg3:#f0efe9;
+  --text:#1a1a1a;--text2:#555;--text3:#999;
+  --border:#e0dfd8;--border2:#cccbc4;
+  --blue:#378ADD;--blue-bg:#E6F1FB;--blue-dark:#0C447C;
+  --green:#3B6D11;--green-bg:#EAF3DE;--green-dark:#27500A;
+  --amber:#BA7517;--amber-bg:#FAEEDA;--amber-dark:#633806;
+  --red:#A32D2D;--red-bg:#FCEBEB;--red-dark:#791F1F;
+  --radius:8px;--radius-lg:12px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg3);color:var(--text);font-size:14px;line-height:1.5}
+.app{max-width:900px;margin:0 auto;padding:0}
+header{background:var(--bg);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:52px;position:sticky;top:0;z-index:100}
+.logo{font-size:18px;font-weight:700;color:var(--text);letter-spacing:-.3px}
+.logo span{color:var(--blue)}
+nav{display:flex;gap:2px}
+.nav-btn{padding:6px 14px;border:none;background:transparent;cursor:pointer;font-size:13px;color:var(--text2);border-radius:var(--radius);transition:.15s}
+.nav-btn:hover{background:var(--bg2)}
+.nav-btn.active{background:var(--bg2);color:var(--text);font-weight:500}
+.main{padding:24px}
+.view{display:none}.view.active{display:block}
+.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px}
+.card-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:14px;text-transform:uppercase;letter-spacing:.04em}
+.sec-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;display:block}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.metric{background:var(--bg2);border-radius:var(--radius);padding:14px 16px}
+.metric-val{font-size:26px;font-weight:600;color:var(--text);line-height:1}
+.metric-lbl{font-size:11px;color:var(--text3);margin-top:4px}
+.metric-sub{font-size:11px;margin-top:2px;font-weight:500}
+.stat-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px}
+.stat-row:last-child{border-bottom:none}
+.stat-lbl{color:var(--text2)}
+.stat-val{font-weight:500}
+.good{color:var(--green)}.bad{color:var(--red)}.warn{color:var(--amber)}.info{color:var(--blue-dark)}
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-green{background:var(--green-bg);color:var(--green-dark)}
+.badge-red{background:var(--red-bg);color:var(--red-dark)}
+.badge-amber{background:var(--amber-bg);color:var(--amber-dark)}
+.badge-blue{background:var(--blue-bg);color:var(--blue-dark)}
+.badge-gray{background:var(--bg3);color:var(--text2)}
+.btn{padding:9px 18px;border-radius:var(--radius);cursor:pointer;font-size:13px;font-weight:500;border:1px solid var(--border2);background:var(--bg);color:var(--text);transition:.15s}
+.btn:hover{background:var(--bg2)}
+.btn-primary{background:var(--blue);color:white;border-color:var(--blue)}
+.btn-primary:hover{opacity:.9}
+.btn-danger{background:var(--red-bg);color:var(--red-dark);border-color:#f0c0c0}
+.btn-sm{padding:6px 12px;font-size:12px}
+.form-row{margin-bottom:12px}
+.form-label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block}
+input[type=text],input[type=date],input[type=number],input[type=email],input[type=password],select,textarea{
+  width:100%;padding:9px 11px;border:1px solid var(--border2);border-radius:var(--radius);
+  background:var(--bg);color:var(--text);font-size:13px;font-family:inherit}
+input:focus,select:focus{outline:none;border-color:var(--blue)}
+.tbtn-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.tbtn{padding:7px 12px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg);cursor:pointer;font-size:12px;color:var(--text2);white-space:nowrap;transition:.1s}
+.tbtn:hover{background:var(--bg2)}
+.tbtn.on{background:var(--bg2);color:var(--text);border-color:#aaa;font-weight:500}
+.tbtn.g{background:var(--green-bg);color:var(--green-dark);border-color:var(--green)}
+.tbtn.r{background:var(--red-bg);color:var(--red-dark);border-color:var(--red)}
+.tbtn.a{background:var(--amber-bg);color:var(--amber-dark);border-color:var(--amber)}
+.tbtn.b{background:var(--blue-bg);color:var(--blue-dark);border-color:var(--blue)}
+.sbtn{width:32px;height:32px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg);cursor:pointer;font-size:16px;font-weight:600;color:var(--text);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sbtn:hover{background:var(--bg2)}
+.sdisp{width:42px;height:32px;border:1px solid var(--border2);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;flex-shrink:0;background:var(--bg)}
+.prog-wrap{background:var(--bg3);border-radius:3px;height:3px;margin-bottom:1rem;overflow:hidden}
+.prog-fill{height:100%;border-radius:3px;background:var(--blue);transition:width .3s}
+.step{display:none}.step.active{display:block}
+.hole-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;margin-bottom:10px}
+.hole-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.hole-num{font-size:15px;font-weight:600}
+.gir-pill{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:600}
+.divider{border:none;border-top:1px solid var(--border);margin:10px 0}
+.field-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px;display:block;font-weight:600}
+.round-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:.15s}
+.round-row:hover{background:var(--bg2);margin:0 -8px;padding:12px 8px;border-radius:var(--radius)}
+.round-row:last-child{border-bottom:none}
+.score-chip{padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600}
+.bar-row{display:flex;align-items:center;gap:10px;padding:5px 0;font-size:12px}
+.bar-lbl{width:90px;color:var(--text2);flex-shrink:0}
+.bar-track{flex:1;background:var(--bg3);border-radius:3px;height:8px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px}
+.bar-val{width:52px;text-align:right;font-weight:500;flex-shrink:0}
+.tiger-ok{color:var(--green);font-weight:600}
+.tiger-bad{color:var(--red);font-weight:600}
+.empty-state{text-align:center;padding:48px 24px;color:var(--text3)}
+.empty-state h3{font-size:16px;color:var(--text2);margin-bottom:8px}
+.nav-btns{display:flex;gap:8px;margin-top:16px}
+.loading{text-align:center;padding:40px;color:var(--text3)}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--text);color:white;padding:12px 20px;border-radius:var(--radius-lg);font-size:13px;font-weight:500;z-index:999;opacity:0;transition:opacity .3s}
+.toast.show{opacity:1}
+.login-wrap{max-width:380px;margin:80px auto}
+.login-wrap .card{padding:32px}
+.login-title{font-size:22px;font-weight:700;margin-bottom:4px}
+.login-sub{color:var(--text2);margin-bottom:24px;font-size:13px}
+.tab-switch{display:flex;gap:0;margin-bottom:20px;border:1px solid var(--border2);border-radius:var(--radius);overflow:hidden}
+.tab-switch button{flex:1;padding:8px;border:none;background:transparent;cursor:pointer;font-size:13px;color:var(--text2)}
+.tab-switch button.active{background:var(--blue);color:white;font-weight:500}
+.chart-legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px;font-size:12px;color:var(--text2)}
+.legend-dot{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:4px}
+</style>
+</head>
+<body>
+
+<div id="login-screen" style="display:none">
+  <div class="login-wrap">
+    <div class="card">
+      <div class="login-title">Caddie<span style="color:var(--blue)">IQ</span></div>
+      <div class="login-sub">Golf Performance Diagnostic Tool</div>
+      <div class="tab-switch">
+        <button class="active" onclick="switchAuth('login')">Log ind</button>
+        <button onclick="switchAuth('signup')">Opret konto</button>
+      </div>
+      <div id="auth-login">
+        <div class="form-row"><label class="form-label">Navn</label><input type="text" id="login-name" placeholder="Dit navn"></div>
+        <div class="form-row"><label class="form-label">Adgangskode</label><input type="password" id="login-pw" placeholder="Din adgangskode"></div>
+        <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="doLogin()">Log ind</button>
+      </div>
+      <div id="auth-signup" style="display:none">
+        <div class="form-row"><label class="form-label">Navn</label><input type="text" id="signup-name" placeholder="Dit navn"></div>
+        <div class="form-row"><label class="form-label">Adgangskode</label><input type="password" id="signup-pw" placeholder="Vælg adgangskode"></div>
+        <button class="btn btn-primary" style="width:100%;margin-top:8px" onclick="doSignup()">Opret konto</button>
+      </div>
+      <div id="auth-error" style="color:var(--red);font-size:12px;margin-top:10px;display:none"></div>
+    </div>
+  </div>
+</div>
+
+<div id="main-app" style="display:none">
+<header>
+  <div class="logo">Caddie<span>IQ</span></div>
+  <nav>
+    <button class="nav-btn active" onclick="showView('dashboard')">Dashboard</button>
+    <button class="nav-btn" onclick="showView('newround')">+ Ny runde</button>
+    <button class="nav-btn" onclick="showView('rounds')">Runder</button>
+    <button class="nav-btn" onclick="showView('stats')">Statistik</button>
+    <button class="nav-btn" onclick="showView('tiger')">Tiger Metrics</button>
+    <button class="nav-btn" onclick="doLogout()" style="margin-left:8px;color:var(--text3)">Log ud</button>
+  </nav>
+</header>
+
+<div class="main app">
+
+<div id="view-dashboard" class="view active">
+  <div id="dash-loading" class="loading">Henter data...</div>
+  <div id="dash-empty" class="empty-state" style="display:none">
+    <h3>Velkommen til CaddieIQ</h3>
+    <p>Tilføj din første runde for at se dit performance dashboard</p>
+    <button class="btn btn-primary" style="margin-top:16px" onclick="showView('newround')">+ Tilføj runde</button>
+  </div>
+  <div id="dash-content" style="display:none"></div>
+</div>
+
+<div id="view-newround" class="view">
+  <div id="nr-info" class="step active">
+    <span class="sec-label">Trin 1/4 — Bane info</span>
+    <div class="prog-wrap"><div class="prog-fill" style="width:25%"></div></div>
+    <div class="card">
+      <div class="form-row"><label class="form-label">Bane</label><input type="text" id="f-course" placeholder="fx Rungsted Golfklub"></div>
+      <div class="g2">
+        <div class="form-row"><label class="form-label">Dato</label><input type="date" id="f-date"></div>
+        <div class="form-row"><label class="form-label">Vejr</label>
+          <select id="f-weather"><option>Sol</option><option>Overskyet</option><option>Blæst</option><option>Regn</option></select>
+        </div>
+      </div>
+      <div class="g3">
+        <div class="form-row"><label class="form-label">Tee</label>
+          <select id="f-tee"><option>Gul</option><option>Rød</option><option>Hvid</option><option>Blå</option></select>
+        </div>
+        <div class="form-row"><label class="form-label">Slope</label><input type="number" id="f-slope" placeholder="113" min="55" max="155"></div>
+        <div class="form-row"><label class="form-label">Course rating</label><input type="number" id="f-cr" placeholder="72.0" step="0.1"></div>
+      </div>
+      <div class="form-row"><label class="form-label">Handicap inden runden</label><input type="number" id="f-hcp" placeholder="12.4" step="0.1" style="max-width:160px"></div>
+    </div>
+    <div class="nav-btns">
+      <button class="btn" onclick="showView('dashboard')">Annuller</button>
+      <button class="btn btn-primary" onclick="startHoles()">Næste — scorecard</button>
+    </div>
+  </div>
+
+  <div id="nr-holes" class="step">
+    <span class="sec-label" id="hole-step-lbl">Trin 2/4 — Hul 1–9</span>
+    <div class="prog-wrap"><div class="prog-fill" id="hole-prog" style="width:50%"></div></div>
+    <div id="holes-wrap"></div>
+    <div class="nav-btns">
+      <button class="btn" id="hole-back" onclick="holeBack()">Tilbage</button>
+      <button class="btn btn-primary" id="hole-next" onclick="holeNext()">Næste — hul 10–18</button>
+    </div>
+  </div>
+
+  <div id="nr-summary" class="step">
+    <span class="sec-label">Trin 4/4 — Opsummering & gem</span>
+    <div class="prog-wrap"><div class="prog-fill" style="width:100%"></div></div>
+    <div id="summary-content"></div>
+    <div class="nav-btns">
+      <button class="btn" onclick="showHoles(9)">Tilbage</button>
+      <button class="btn btn-primary" id="save-btn" onclick="saveRound()">Gem runde</button>
+    </div>
+  </div>
+</div>
+
+<div id="view-rounds" class="view">
+  <div id="rounds-loading" class="loading">Henter runder...</div>
+  <div id="rounds-content" style="display:none">
+    <div class="card">
+      <div id="rounds-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="view-stats" class="view">
+  <div id="stats-loading" class="loading">Beregner statistik...</div>
+  <div id="stats-content" style="display:none"></div>
+</div>
+
+<div id="view-tiger" class="view">
+  <div id="tiger-loading" class="loading">Henter Tiger Metrics...</div>
+  <div id="tiger-content" style="display:none"></div>
+</div>
+
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SB_URL = 'https://awtiavhmbxpcsfddylxa.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3dGlhdmhtYnhwY3NmZGR5bHhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1MTU3NDksImV4cCI6MjA5MjA5MTc0OX0.7MHiKFDJqODAp-534BxVPDb8I41gmL5cgK0jsjJCXdc';
+
+let currentUser = null;
+let rounds = [];
+let hd = [];
+let holeGroup = 0;
+let charts = {};
+
+// ── AUTH ─────────────────────────────────────────────────────────────────────
+function authHeaders(){return{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};}
+
+async function sbFetch(path, opts={}){
+  const r = await fetch(SB_URL+path, {headers:authHeaders(), ...opts});
+  if(!r.ok){const e=await r.text();throw new Error(e);}
+  const t=await r.text();
+  return t?JSON.parse(t):[];
+}
+
+function hashPw(pw){
+  let h=0;
+  for(let i=0;i<pw.length;i++){h=Math.imul(31,h)+pw.charCodeAt(i)|0;}
+  return 'h'+Math.abs(h).toString(36)+'x'+pw.length;
+}
+
+async function doLogin(){
+  const name=document.getElementById('login-name').value.trim();
+  const pw=document.getElementById('login-pw').value;
+  if(!name||!pw){showAuthError('Udfyld navn og adgangskode');return;}
+  try{
+    const hash=hashPw(pw);
+    const users=await sbFetch(`/rest/v1/users?name=eq.${encodeURIComponent(name)}&password_hash=eq.${encodeURIComponent(hash)}&select=*`);
+    if(!users.length){showAuthError('Forkert navn eller adgangskode');return;}
+    currentUser=users[0];
+    localStorage.setItem('caddieiq_user',JSON.stringify(currentUser));
+    startApp();
+  }catch(e){showAuthError('Fejl: '+e.message);}
+}
+
+async function doSignup(){
+  const name=document.getElementById('signup-name').value.trim();
+  const pw=document.getElementById('signup-pw').value;
+  if(!name||!pw){showAuthError('Udfyld navn og adgangskode');return;}
+  if(pw.length<4){showAuthError('Adgangskode skal være mindst 4 tegn');return;}
+  try{
+    const existing=await sbFetch(`/rest/v1/users?name=eq.${encodeURIComponent(name)}&select=id`);
+    if(existing.length){showAuthError('Det navn er allerede taget');return;}
+    const hash=hashPw(pw);
+    const res=await sbFetch('/rest/v1/users',{
+      method:'POST',
+      headers:{...authHeaders(),'Prefer':'return=representation'},
+      body:JSON.stringify({name,password_hash:hash})
+    });
+    currentUser=Array.isArray(res)?res[0]:res;
+    localStorage.setItem('caddieiq_user',JSON.stringify(currentUser));
+    startApp();
+  }catch(e){showAuthError('Fejl: '+e.message);}
+}
+
+function doLogout(){
+  localStorage.removeItem('caddieiq_user');
+  currentUser=null;rounds=[];
+  document.getElementById('main-app').style.display='none';
+  document.getElementById('login-screen').style.display='block';
+}
+
+function showAuthError(msg){
+  const el=document.getElementById('auth-error');
+  el.textContent=msg;el.style.display='block';
+}
+
+function switchAuth(mode){
+  document.getElementById('auth-login').style.display=mode==='login'?'block':'none';
+  document.getElementById('auth-signup').style.display=mode==='signup'?'block':'none';
+  document.getElementById('auth-error').style.display='none';
+  document.querySelectorAll('.tab-switch button').forEach((b,i)=>b.classList.toggle('active',(mode==='login'&&i===0)||(mode==='signup'&&i===1)));
+}
+
+function startApp(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('main-app').style.display='block';
+  document.getElementById('f-date').value=new Date().toISOString().split('T')[0];
+  loadRounds().then(renderDashboard);
+}
+
+// ── DATA ─────────────────────────────────────────────────────────────────────
+async function loadRounds(){
+  try{
+    rounds=await sbFetch(`/rest/v1/rounds?user_id=eq.${encodeURIComponent(currentUser.id)}&order=date.desc,created_at.desc&select=*`);
+  }catch(e){rounds=[];showToast('Kunne ikke hente runder');}
+}
+
+// ── NAVIGATION ───────────────────────────────────────────────────────────────
+function showView(v){
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  const idx=['dashboard','newround','rounds','stats','tiger'].indexOf(v);
+  document.querySelectorAll('.nav-btn')[idx]?.classList.add('active');
+  if(v==='dashboard')renderDashboard();
+  if(v==='rounds'){document.getElementById('rounds-loading').style.display='block';document.getElementById('rounds-content').style.display='none';loadRounds().then(renderRounds);}
+  if(v==='stats'){document.getElementById('stats-loading').style.display='block';document.getElementById('stats-content').style.display='none';loadRounds().then(renderStats);}
+  if(v==='tiger'){document.getElementById('tiger-loading').style.display='block';document.getElementById('tiger-content').style.display='none';loadRounds().then(renderTiger);}
+}
+
+// ── HOLE ENTRY ───────────────────────────────────────────────────────────────
+const PAR=[4,3,5,4,4,3,5,4,4,4,3,5,4,4,3,5,4,4];
+
+function newHole(par,i){return{hole:i+1,par,score:par,putts:2,gir:false,girPlus:false,teeClub:null,teeMiss:null,approachDist:null,approachResult:null,shortGame:null,shortResult:null,penalty:0,penaltyReason:null};}
+
+function startHoles(){
+  hd=PAR.map((par,i)=>newHole(par,i));
+  showHoles(0);showStep('holes');
+}
+
+function showHoles(start){
+  holeGroup=start;
+  const lbl=start===0?'Trin 2/4 — Hul 1–9':'Trin 3/4 — Hul 10–18';
+  const pct=start===0?'50%':'75%';
+  document.getElementById('hole-step-lbl').textContent=lbl;
+  document.getElementById('hole-prog').style.width=pct;
+  document.getElementById('hole-next').textContent=start===0?'Næste — hul 10–18':'Næste — opsummering';
+  document.getElementById('hole-back').textContent=start===0?'Tilbage til baneinfo':'Tilbage til hul 1–9';
+  buildHoles(start,start+9);
+}
+
+function holeBack(){if(holeGroup===0)showStep('info');else showHoles(0);}
+function holeNext(){if(holeGroup===0)showHoles(9);else{buildSummary();showStep('summary');}}
+
+function showStep(s){
+  document.querySelectorAll('#view-newround .step').forEach(el=>el.classList.remove('active'));
+  document.getElementById('nr-'+s).classList.add('active');
+}
+
+function sc(d){if(d<=-2)return'#185FA5';if(d===-1)return'#3B6D11';if(d===0)return'#888';if(d===1)return'#BA7517';return'#A32D2D';}
+function dl(d){if(d<=-2)return'Eagle';if(d===-1)return'Birdie';if(d===0)return'Par';if(d===1)return'Bogey';if(d===2)return'+2';return d>0?'+'+d:''+d;}
+
+function buildHoles(start,end){
+  const w=document.getElementById('holes-wrap');
+  let html='';
+  for(let i=start;i<end;i++){
+    const h=hd[i];
+    const d=h.score-h.par;
+    const isPar3=h.par===3;
+    const gPill=h.girPlus?'background:#E6F1FB;color:#0C447C':h.gir?'background:#EAF3DE;color:#27500A':'background:#f0efe9;color:#888';
+    const gTxt=h.girPlus?'GIR+':h.gir?'GIR':'Ingen GIR';
+
+    const teeHTML=isPar3?'':`
+      <div class="field-label">Tee-klub</div>
+      <div class="tbtn-row">
+        ${['Driver','3 Wood','Hybrid','Jern','Lay-up'].map(c=>`<button class="tbtn${h.teeClub===c?' on':''}" onclick="setField(${i},'teeClub','${c}',this)">${c}</button>`).join('')}
+      </div>
+      <div class="field-label">Tee-resultat</div>
+      <div class="tbtn-row">
+        <button class="tbtn${h.teeMiss==='fairway'?' g':''}" onclick="setTeeRes(${i},'fairway',this)">Fairway</button>
+        <button class="tbtn${h.teeMiss==='rough-v'?' a':''}" onclick="setTeeRes(${i},'rough-v',this)">Rough V</button>
+        <button class="tbtn${h.teeMiss==='rough-h'?' a':''}" onclick="setTeeRes(${i},'rough-h',this)">Rough H</button>
+        <button class="tbtn${h.teeMiss==='bunker'?' a':''}" onclick="setTeeRes(${i},'bunker',this)">Bunker</button>
+        <button class="tbtn${h.teeMiss==='ob'?' r':''}" onclick="setTeeRes(${i},'ob',this)">OB</button>
+        <button class="tbtn${h.teeMiss==='vand'?' r':''}" onclick="setTeeRes(${i},'vand',this)">Vand</button>
+      </div>`;
+
+    const sgHTML=h.gir?'':`
+      <div class="field-label">Short game</div>
+      <div class="tbtn-row">
+        ${['Chip','Pitch','Bunker','Lob'].map(t=>`<button class="tbtn${h.shortGame===t?' on':''}" onclick="setField(${i},'shortGame','${t}',this)">${t}</button>`).join('')}
+      </div>
+      <div class="field-label">Short game resultat</div>
+      <div class="tbtn-row">
+        <button class="tbtn${h.shortResult==='up-and-down'?' g':''}" onclick="setField(${i},'shortResult','up-and-down',this)">Up-and-down</button>
+        <button class="tbtn${h.shortResult==='<3m'?' g':''}" onclick="setField(${i},'shortResult','<3m',this)">&lt;3m putt</button>
+        <button class="tbtn${h.shortResult==='3-6m'?' a':''}" onclick="setField(${i},'shortResult','3-6m',this)">3–6m putt</button>
+        <button class="tbtn${h.shortResult==='>6m'?' r':''}" onclick="setField(${i},'shortResult','>6m',this)">&gt;6m putt</button>
+      </div>`;
+
+    html+=`<div class="hole-card">
+      <div class="hole-hdr">
+        <span class="hole-num">Hul ${h.hole} <span style="font-size:12px;color:#999;font-weight:400;cursor:pointer" onclick="cyclePar(${i})" title="Klik for at skifte par">Par ${h.par}</span></span>
+        <span class="gir-pill" style="${gPill}" id="gp-${i}">${gTxt}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <button class="sbtn" onclick="adjS(${i},-1)">−</button>
+        <div class="sdisp" id="sc-${i}" style="color:${sc(d)}">${h.score}</div>
+        <button class="sbtn" onclick="adjS(${i},1)">+</button>
+        <span style="font-size:13px;color:#999;min-width:56px" id="dl-${i}">${dl(d)}</span>
+        <div style="display:flex;align-items:center;gap:5px;margin-left:auto">
+          <span style="font-size:11px;color:#999">Putts</span>
+          <button class="sbtn" style="width:28px;height:28px;font-size:13px" onclick="adjP(${i},-1)">−</button>
+          <span id="pt-${i}" style="width:24px;text-align:center;font-size:14px;font-weight:600">${h.putts}</span>
+          <button class="sbtn" style="width:28px;height:28px;font-size:13px" onclick="adjP(${i},1)">+</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      ${teeHTML}
+      <div class="field-label">Approach afstand</div>
+      <div class="tbtn-row">
+        ${['<50m','50–100m','100–150m','>150m'].map((l,j)=>{const v=['<50','50-100','100-150','>150'][j];return`<button class="tbtn${hd[i].approachDist===v?' b':''}" onclick="setADist(${i},'${v}',this)">${l}</button>`;}).join('')}
+      </div>
+      <div class="field-label">Approach resultat</div>
+      <div class="tbtn-row">
+        <button class="tbtn${h.approachResult==='green'?' g':''}" onclick="setARes(${i},'green',this)">Green</button>
+        <button class="tbtn${h.approachResult==='kort'?' a':''}" onclick="setARes(${i},'kort',this)">Kort</button>
+        <button class="tbtn${h.approachResult==='lang'?' a':''}" onclick="setARes(${i},'lang',this)">Lang</button>
+        <button class="tbtn${h.approachResult==='venstre'?' a':''}" onclick="setARes(${i},'venstre',this)">Venstre</button>
+        <button class="tbtn${h.approachResult==='højre'?' a':''}" onclick="setARes(${i},'højre',this)">Højre</button>
+        <button class="tbtn${h.approachResult==='bunker'?' r':''}" onclick="setARes(${i},'bunker',this)">Bunker</button>
+        <button class="tbtn${h.approachResult==='vand'?' r':''}" onclick="setARes(${i},'vand',this)">Vand</button>
+      </div>
+      ${sgHTML}
+      <div class="divider"></div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:11px;color:#999">Strafslag</span>
+        <button class="sbtn" style="width:26px;height:26px;font-size:13px" onclick="adjPen(${i},-1)">−</button>
+        <span id="pen-${i}" style="width:20px;text-align:center;font-size:14px;font-weight:600">${h.penalty}</span>
+        <button class="sbtn" style="width:26px;height:26px;font-size:13px" onclick="adjPen(${i},1)">+</button>
+        ${h.penalty>0?`<div class="tbtn-row" style="margin:0 0 0 8px">${['OB','Vand','Unplayable'].map(t=>`<button class="tbtn${h.penaltyReason===t?' r':''}" style="padding:4px 8px;font-size:11px" onclick="setField(${i},'penaltyReason','${t}',this)">${t}</button>`).join('')}</div>`:''}
+      </div>
+    </div>`;
+  }
+  w.innerHTML=html;
+}
+
+function adjS(i,d){hd[i].score=Math.max(1,hd[i].score+d);const diff=hd[i].score-hd[i].par;document.getElementById('sc-'+i).textContent=hd[i].score;document.getElementById('sc-'+i).style.color=sc(diff);document.getElementById('dl-'+i).textContent=dl(diff);}
+function adjP(i,d){hd[i].putts=Math.max(0,hd[i].putts+d);document.getElementById('pt-'+i).textContent=hd[i].putts;}
+function adjPen(i,d){hd[i].penalty=Math.max(0,hd[i].penalty+d);buildHoles(holeGroup,holeGroup+9);}
+function cyclePar(i){const p=[3,4,5];hd[i].par=p[(p.indexOf(hd[i].par)+1)%3];buildHoles(holeGroup,holeGroup+9);}
+
+function setField(i,k,v,btn){hd[i][k]=v;btn.closest('.tbtn-row').querySelectorAll('.tbtn').forEach(b=>b.className='tbtn');btn.classList.add('on');}
+function setTeeRes(i,v,btn){hd[i].teeMiss=v;btn.closest('.tbtn-row').querySelectorAll('.tbtn').forEach(b=>b.className='tbtn');btn.classList.add(v==='fairway'?'tbtn g':v==='ob'||v==='vand'?'tbtn r':'tbtn a');}
+function setADist(i,v,btn){hd[i].approachDist=v;btn.closest('.tbtn-row').querySelectorAll('.tbtn').forEach(b=>b.className='tbtn');btn.classList.add('tbtn b');if(hd[i].approachResult==='green'&&hd[i].par===5){hd[i].girPlus=(v==='>150'||v==='100-150');updateGirPill(i);}}
+function setARes(i,v,btn){
+  hd[i].approachResult=v;
+  btn.closest('.tbtn-row').querySelectorAll('.tbtn').forEach(b=>b.className='tbtn');
+  const miss=['kort','lang','venstre','højre','bunker','vand'];
+  if(v==='green'){btn.classList.add('tbtn g');hd[i].gir=true;hd[i].girPlus=(hd[i].par===5&&(hd[i].approachDist==='>150'||hd[i].approachDist==='100-150'));}
+  else if(miss.includes(v)){btn.classList.add(v==='bunker'||v==='vand'?'tbtn r':'tbtn a');hd[i].gir=false;hd[i].girPlus=false;}
+  updateGirPill(i);
+  buildHoles(holeGroup,holeGroup+9);
+}
+function updateGirPill(i){
+  const el=document.getElementById('gp-'+i);if(!el)return;
+  const h=hd[i];
+  if(h.girPlus){el.textContent='GIR+';el.style.cssText='background:#E6F1FB;color:#0C447C';}
+  else if(h.gir){el.textContent='GIR';el.style.cssText='background:#EAF3DE;color:#27500A';}
+  else{el.textContent='Ingen GIR';el.style.cssText='background:#f0efe9;color:#888';}
+}
+
+// ── CALC ─────────────────────────────────────────────────────────────────────
+function calcTiger(holes){
+  const th=holes.filter(h=>h.putts>=3).length;
+  const sp5=holes.filter(h=>h.par===5&&h.score>=6).length;
+  const bi150=holes.filter(h=>(h.score-h.par)===1&&['<50','50-100','100-150'].includes(h.approachDist)).length;
+  const b2b=holes.reduce((a,h,i)=>{if(i>0&&(h.score-h.par)===1&&(holes[i-1].score-holes[i-1].par)===1)a++;return a;},0);
+  const dbl=holes.filter(h=>h.score-h.par>=2).length;
+  const bb=holes.reduce((a,h,i)=>{if(i>0&&(holes[i-1].score-holes[i-1].par)>=1&&(h.score-h.par)<=0)a++;return a;},0);
+  return{th,sp5,bi150,b2b,dbl,bb};
+}
+
+// ── SUMMARY ───────────────────────────────────────────────────────────────────
+function buildSummary(){
+  const tot=hd.reduce((s,h)=>s+h.score,0);
+  const totPar=hd.reduce((s,h)=>s+h.par,0);
+  const putts=hd.reduce((s,h)=>s+h.putts,0);
+  const gir=hd.filter(h=>h.gir).length;
+  const girPlus=hd.filter(h=>h.girPlus).length;
+  const fir=hd.filter(h=>h.par>3&&h.teeMiss==='fairway').length;
+  const firTot=hd.filter(h=>h.par>3).length;
+  const diff=tot-totPar;
+  const t=calcTiger(hd);
+  const cats={eagle:0,birdie:0,par:0,bogey:0,dbl:0};
+  hd.forEach(h=>{const d=h.score-h.par;if(d<=-2)cats.eagle++;else if(d===-1)cats.birdie++;else if(d===0)cats.par++;else if(d===1)cats.bogey++;else cats.dbl++;});
+  const dists=['<50','50-100','100-150','>150'];
+  const distL=['<50m','50–100m','100–150m','>150m'];
+  const bpRows=dists.map((dv,di)=>{const gh=hd.filter(h=>h.gir&&h.approachDist===dv);const bird=gh.filter(h=>h.score-h.par<=-1).length;return gh.length?`<div class="bar-row"><span class="bar-lbl">${distL[di]}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(bird/gh.length*100)}%;background:${Math.round(bird/gh.length*100)>=50?'#3B6D11':'#BA7517'}"></div></div><span class="bar-val">${bird}/${gh.length} <span style="color:#999">(${Math.round(bird/gh.length*100)}%)</span></span></div>`:''}).join('');
+  document.getElementById('summary-content').innerHTML=`
+    <div class="card">
+      <div class="card-title">Score</div>
+      <div class="g4" style="margin-bottom:14px">
+        <div class="metric"><div class="metric-val" style="color:${sc(Math.max(-5,Math.min(5,diff)))}">${tot}</div><div class="metric-lbl">Score (${diff>0?'+':''}${diff})</div></div>
+        <div class="metric"><div class="metric-val">${putts}</div><div class="metric-lbl">Putts</div></div>
+        <div class="metric"><div class="metric-val">${gir}/18${girPlus?' <span style="font-size:14px">('+girPlus+'×+)</span>':''}</div><div class="metric-lbl">GIR</div></div>
+        <div class="metric"><div class="metric-val">${fir}/${firTot}</div><div class="metric-lbl">Fairways</div></div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${cats.eagle?`<span class="badge badge-blue">Eagle ×${cats.eagle}</span>`:''}
+        ${cats.birdie?`<span class="badge badge-green">Birdie ×${cats.birdie}</span>`:''}
+        ${cats.par?`<span class="badge badge-gray">Par ×${cats.par}</span>`:''}
+        ${cats.bogey?`<span class="badge badge-amber">Bogey ×${cats.bogey}</span>`:''}
+        ${cats.dbl?`<span class="badge badge-red">+2 ×${cats.dbl}</span>`:''}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Birdie-konvertering per afstand</div>
+      ${bpRows||'<span style="color:#999;font-size:13px">Ingen approach-data registreret</span>'}
+    </div>
+    <div class="card">
+      <div class="card-title">Tiger Metrics</div>
+      <div class="stat-row"><span class="stat-lbl">3-putts</span><span class="${t.th===0?'tiger-ok':'tiger-bad'}">${t.th===0?'Ingen':t.th}</span></div>
+      <div class="stat-row"><span class="stat-lbl">6'ere på par 5</span><span class="${t.sp5===0?'tiger-ok':'tiger-bad'}">${t.sp5===0?'Ingen':t.sp5}</span></div>
+      <div class="stat-row"><span class="stat-lbl">Bogeys inden for 150m</span><span class="${t.bi150===0?'tiger-ok':'tiger-bad'}">${t.bi150===0?'Ingen':t.bi150}</span></div>
+      <div class="stat-row"><span class="stat-lbl">Back-to-back bogeys</span><span class="${t.b2b===0?'tiger-ok':'tiger-bad'}">${t.b2b===0?'Ingen':t.b2b}</span></div>
+      <div class="stat-row"><span class="stat-lbl">Doubles</span><span class="${t.dbl===0?'tiger-ok':'tiger-bad'}">${t.dbl===0?'Ingen':t.dbl}</span></div>
+      <div class="stat-row"><span class="stat-lbl">Bounce back</span><span class="${t.bb>0?'tiger-ok':'tiger-bad'}">${t.bb>0?t.bb+' gang'+(t.bb>1?'e':''):'Ingen'}</span></div>
+    </div>`;
+}
+
+// ── SAVE ──────────────────────────────────────────────────────────────────────
+async function saveRound(){
+  const btn=document.getElementById('save-btn');
+  btn.textContent='Gemmer...';btn.disabled=true;
+  const tot=hd.reduce((s,h)=>s+h.score,0);
+  const totPar=hd.reduce((s,h)=>s+h.par,0);
+  const putts=hd.reduce((s,h)=>s+h.putts,0);
+  const gir=hd.filter(h=>h.gir).length;
+  const girPlus=hd.filter(h=>h.girPlus).length;
+  const fir=hd.filter(h=>h.par>3&&h.teeMiss==='fairway').length;
+  const firTot=hd.filter(h=>h.par>3).length;
+  const tiger=calcTiger(hd);
+  const cats={eagle:0,birdie:0,par:0,bogey:0,dbl:0};
+  hd.forEach(h=>{const d=h.score-h.par;if(d<=-2)cats.eagle++;else if(d===-1)cats.birdie++;else if(d===0)cats.par++;else if(d===1)cats.bogey++;else cats.dbl++;});
+  const payload={
+    user_id:currentUser.id,
+    course:document.getElementById('f-course').value||'Ukendt bane',
+    date:document.getElementById('f-date').value||null,
+    weather:document.getElementById('f-weather').value,
+    tee:document.getElementById('f-tee').value,
+    slope:parseInt(document.getElementById('f-slope').value)||113,
+    course_rating:parseFloat(document.getElementById('f-cr').value)||72,
+    handicap:parseFloat(document.getElementById('f-hcp').value)||null,
+    score:tot,par:totPar,putts,gir,gir_plus:girPlus,fir,fir_total:firTot,
+    tiger,cats,holes:hd
+  };
+  try{
+    await sbFetch('/rest/v1/rounds',{method:'POST',headers:{...authHeaders(),'Prefer':'return=minimal'},body:JSON.stringify(payload)});
+    showToast('Runde gemt!');
+    showStep('info');
+    showView('dashboard');
+  }catch(e){
+    showToast('Fejl ved gem: '+e.message);
+  }
+  btn.textContent='Gem runde';btn.disabled=false;
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+function renderDashboard(){
+  document.getElementById('dash-loading').style.display='none';
+  if(!rounds.length){document.getElementById('dash-empty').style.display='block';document.getElementById('dash-content').style.display='none';return;}
+  document.getElementById('dash-empty').style.display='none';
+  document.getElementById('dash-content').style.display='block';
+  const rn=rounds.length;
+  const latest=rounds[0];
+  const latDiff=latest.score-latest.par;
+  const avg=v=>(rounds.reduce((s,r)=>s+(v(r)||0),0)/rn);
+  const avgScore=avg(r=>r.score).toFixed(1);
+  const avgPutts=avg(r=>r.putts).toFixed(1);
+  const avgGIR=Math.round(avg(r=>r.gir));
+  const avgFIR=rounds[0].fir_total>0?Math.round(avg(r=>(r.fir||0)/(r.fir_total||1)*100)):0;
+  const best=Math.min(...rounds.map(r=>r.score));
+  const all=rounds.flatMap(r=>r.holes||[]);
+  const birdies=all.filter(h=>h.score-h.par<=-1).length;
+  const bogeys=all.filter(h=>h.score-h.par===1).length;
+  const bbRatio=bogeys>0?(birdies/bogeys).toFixed(2):birdies>0?'∞':'—';
+  const scramble=all.filter(h=>!h.gir);
+  const upDown=scramble.filter(h=>h.shortResult==='up-and-down'||h.putts<=1).length;
+  const scrPct=scramble.length?Math.round(upDown/scramble.length*100):0;
+  const girHoles=all.filter(h=>h.gir);
+  const puttPerGIR=girHoles.length?(girHoles.reduce((s,h)=>s+h.putts,0)/girHoles.length).toFixed(2):'—';
+  const totT={th:0,sp5:0,bi150:0,b2b:0,dbl:0,bb:0};
+  rounds.forEach(r=>{if(r.tiger)Object.keys(totT).forEach(k=>totT[k]+=(r.tiger[k]||0));});
+  destroyCharts();
+  document.getElementById('dash-content').innerHTML=`
+    <span class="sec-label">Seneste runde — ${latest.course}${latest.date?' · '+new Date(latest.date).toLocaleDateString('da-DK',{day:'numeric',month:'short',year:'numeric'}):''}</span>
+    <div class="g4" style="margin-bottom:20px">
+      <div class="metric"><div class="metric-val" style="color:${sc(Math.max(-5,Math.min(5,latDiff)))}">${latest.score}</div><div class="metric-lbl">Score (${latDiff>0?'+':''}${latDiff})</div></div>
+      <div class="metric"><div class="metric-val">${latest.putts}</div><div class="metric-lbl">Putts</div></div>
+      <div class="metric"><div class="metric-val">${latest.gir}/18</div><div class="metric-lbl">GIR</div></div>
+      <div class="metric"><div class="metric-val">${latest.fir}/${latest.fir_total}</div><div class="metric-lbl">Fairways</div></div>
+    </div>
+    <span class="sec-label">Snit over ${rn} runde${rn>1?'r':''}</span>
+    <div class="g4" style="margin-bottom:20px">
+      <div class="metric"><div class="metric-val">${avgScore}</div><div class="metric-lbl">Score</div></div>
+      <div class="metric"><div class="metric-val">${best}</div><div class="metric-lbl">Bedste runde</div></div>
+      <div class="metric"><div class="metric-val">${avgPutts}</div><div class="metric-lbl">Putts</div></div>
+      <div class="metric"><div class="metric-val">${avgGIR}/18</div><div class="metric-lbl">GIR</div></div>
+      <div class="metric"><div class="metric-val">${avgFIR}%</div><div class="metric-lbl">FIR %</div></div>
+      <div class="metric"><div class="metric-val">${bbRatio}</div><div class="metric-lbl">Birdie/Bogey</div></div>
+      <div class="metric"><div class="metric-val">${scrPct}%</div><div class="metric-lbl">Scrambling %</div></div>
+      <div class="metric"><div class="metric-val">${puttPerGIR}</div><div class="metric-lbl">Putts/GIR</div></div>
+    </div>
+    ${rn>=3?`<span class="sec-label">Score trend</span>
+    <div class="card"><div style="position:relative;height:180px"><canvas id="trend-chart" role="img" aria-label="Score trend">Score trend</canvas></div></div>`:''}
+    <span class="sec-label">Tiger Metrics — alle runder</span>
+    <div class="card">
+      <div class="stat-row"><span class="stat-lbl">3-putts</span><span class="${totT.th===0?'tiger-ok':'tiger-bad'}">${totT.th} total · ${(totT.th/rn).toFixed(1)}/runde</span></div>
+      <div class="stat-row"><span class="stat-lbl">6'ere på par 5</span><span class="${totT.sp5===0?'tiger-ok':'tiger-bad'}">${totT.sp5} total · ${(totT.sp5/rn).toFixed(1)}/runde</span></div>
+      <div class="stat-row"><span class="stat-lbl">Bogeys inden for 150m</span><span class="${totT.bi150===0?'tiger-ok':'tiger-bad'}">${totT.bi150} total · ${(totT.bi150/rn).toFixed(1)}/runde</span></div>
+      <div class="stat-row"><span class="stat-lbl">Back-to-back bogeys</span><span class="${totT.b2b===0?'tiger-ok':'tiger-bad'}">${totT.b2b} total · ${(totT.b2b/rn).toFixed(1)}/runde</span></div>
+      <div class="stat-row"><span class="stat-lbl">Doubles</span><span class="${totT.dbl===0?'tiger-ok':'tiger-bad'}">${totT.dbl} total · ${(totT.dbl/rn).toFixed(1)}/runde</span></div>
+      <div class="stat-row"><span class="stat-lbl">Bounce back</span><span class="${totT.bb>0?'tiger-ok':'tiger-bad'}">${totT.bb} total · ${(totT.bb/rn).toFixed(1)}/runde</span></div>
+    </div>`;
+  if(rn>=3){
+    setTimeout(()=>{
+      const rev=[...rounds].reverse();
+      const labels=rev.map((r,i)=>r.date?new Date(r.date).toLocaleDateString('da-DK',{day:'numeric',month:'short'}):`R${i+1}`);
+      charts['trend']=new Chart(document.getElementById('trend-chart'),{type:'line',data:{labels,datasets:[{label:'Score til par',data:rev.map(r=>r.score-r.par),borderColor:'#378ADD',backgroundColor:'rgba(55,138,221,.08)',fill:true,tension:.35,pointRadius:4,pointBackgroundColor:'#378ADD'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#999',callback:v=>(v>0?'+':'')+v}},x:{grid:{display:false},ticks:{color:'#999',font:{size:11},autoSkip:false,maxRotation:45}}}}});
+    },50);
+  }
+}
+
+// ── ROUNDS LIST ───────────────────────────────────────────────────────────────
+function renderRounds(){
+  document.getElementById('rounds-loading').style.display='none';
+  document.getElementById('rounds-content').style.display='block';
+  if(!rounds.length){document.getElementById('rounds-list').innerHTML='<div class="empty-state"><h3>Ingen runder endnu</h3></div>';return;}
+  document.getElementById('rounds-list').innerHTML=rounds.map(r=>{
+    const diff=r.score-r.par;const sign=diff>0?'+':'';
+    const bg=diff<=0?'#EAF3DE':diff<=3?'#FAEEDA':'#FCEBEB';
+    const tx=diff<=0?'#27500A':diff<=3?'#633806':'#791F1F';
+    const d=r.date?new Date(r.date).toLocaleDateString('da-DK',{day:'numeric',month:'short',year:'numeric'}):'';
+    const t=r.tiger||{};
+    const flags=[t.th>0?`${t.th}×3putt`:'',t.dbl>0?`${t.dbl}×dbl`:'',t.b2b>0?`${t.b2b}×B2B`:''].filter(Boolean).join(' · ');
+    return`<div class="round-row">
+      <div>
+        <div style="font-weight:600">${r.course}</div>
+        <div style="font-size:12px;color:#999">${d}${r.weather?' · '+r.weather:''} · ${r.gir}/18 GIR · ${r.putts} putts${flags?` · <span style="color:#A32D2D">${flags}</span>`:''}</div>
+      </div>
+      <span class="score-chip" style="background:${bg};color:${tx}">${r.score} (${sign}${diff})</span>
+    </div>`;
+  }).join('');
+}
+
+// ── STATS ─────────────────────────────────────────────────────────────────────
+function renderStats(){
+  document.getElementById('stats-loading').style.display='none';
+  document.getElementById('stats-content').style.display='block';
+  if(!rounds.length){document.getElementById('stats-content').innerHTML='<div class="empty-state"><h3>Ingen data endnu</h3></div>';return;}
+  const all=rounds.flatMap(r=>r.holes||[]);
+  const rn=rounds.length;
+  const par3=all.filter(h=>h.par===3),par4=all.filter(h=>h.par===4),par5=all.filter(h=>h.par===5);
+  const aAvg=h=>h.length?(h.reduce((s,x)=>s+(x.score-x.par),0)/h.length).toFixed(2):'-';
+  const aGIR=h=>h.length?Math.round(h.filter(x=>x.gir).length/h.length*100)+'%':'-';
+  const aBird=h=>h.length?Math.round(h.filter(x=>x.score-x.par<=-1).length/h.length*100)+'%':'-';
+  const dists=['<50','50-100','100-150','>150'];
+  const distL=['<50m','50–100m','100–150m','>150m'];
+  const appRows=dists.map((d,i)=>{const ah=all.filter(h=>h.approachDist===d);const gH=ah.filter(h=>h.gir).length;const bH=ah.filter(h=>h.gir&&h.score-h.par<=-1).length;const gPct=ah.length?Math.round(gH/ah.length*100):0;const bPct=gH?Math.round(bH/gH*100):0;return ah.length?`<div class="stat-row"><span class="stat-lbl">${distL[i]} (${ah.length} huller)</span><span class="stat-val">${gPct}% GIR · ${bPct}% birdie-konv.</span></div>`:''}).join('');
+  const missDir={venstre:0,højre:0,kort:0,lang:0,bunker:0,vand:0};
+  all.filter(h=>h.approachResult&&h.approachResult!=='green').forEach(h=>missDir[h.approachResult]=(missDir[h.approachResult]||0)+1);
+  const missTot=Object.values(missDir).reduce((s,v)=>s+v,0);
+  const missKeys=Object.keys(missDir).filter(k=>missDir[k]>0);
+  const teeRes={fairway:0,'rough-v':0,'rough-h':0,bunker:0,ob:0,vand:0};
+  all.filter(h=>h.par>3&&h.teeMiss).forEach(h=>teeRes[h.teeMiss]=(teeRes[h.teeMiss]||0)+1);
+  const teeTot=Object.values(teeRes).reduce((s,v)=>s+v,0);
+  const teeKeys=Object.keys(teeRes).filter(k=>teeRes[k]>0);
+  const birdies=all.filter(h=>h.score-h.par<=-1).length;
+  const bogeys=all.filter(h=>h.score-h.par===1).length;
+  const scramble=all.filter(h=>!h.gir);
+  const upDown=scramble.filter(h=>h.shortResult==='up-and-down'||h.putts<=1).length;
+  const bouncebacks=rounds.reduce((s,r)=>s+(r.tiger?.bb||0),0);
+  const girHoles=all.filter(h=>h.gir);
+  const p3putt=all.filter(h=>h.putts>=3).length;
+  destroyCharts();
+  document.getElementById('stats-content').innerHTML=`
+    <span class="sec-label">Par-type analyse</span>
+    <div class="card">
+      <div class="stat-row"><span class="stat-lbl">Par 3 (${par3.length} huller)</span><span class="stat-val">Snit ${aAvg(par3)} · GIR ${aGIR(par3)} · ${aBird(par3)} birdie</span></div>
+      <div class="stat-row"><span class="stat-lbl">Par 4 (${par4.length} huller)</span><span class="stat-val">Snit ${aAvg(par4)} · GIR ${aGIR(par4)} · ${aBird(par4)} birdie</span></div>
+      <div class="stat-row"><span class="stat-lbl">Par 5 (${par5.length} huller)</span><span class="stat-val">Snit ${aAvg(par5)} · GIR ${aGIR(par5)} · ${aBird(par5)} birdie</span></div>
+      <div class="stat-row"><span class="stat-lbl">Birdie/Bogey ratio</span><span class="stat-val">${bogeys>0?(birdies/bogeys).toFixed(2):birdies>0?'∞':'—'} (${birdies} birdies / ${bogeys} bogeys)</span></div>
+      <div class="stat-row"><span class="stat-lbl">Scrambling %</span><span class="stat-val">${scramble.length?Math.round(upDown/scramble.length*100)+'%':'—'} (${upDown}/${scramble.length})</span></div>
+      <div class="stat-row"><span class="stat-lbl">Bounce back %</span><span class="stat-val">${bogeys>0?Math.round(bouncebacks/bogeys*100)+'%':'—'} (${bouncebacks}/${bogeys})</span></div>
+      <div class="stat-row"><span class="stat-lbl">Putts per GIR-hul</span><span class="stat-val">${girHoles.length?(girHoles.reduce((s,h)=>s+h.putts,0)/girHoles.length).toFixed(2):'—'}</span></div>
+      <div class="stat-row"><span class="stat-lbl">3-putt %</span><span class="stat-val">${all.length?Math.round(p3putt/all.length*100)+'%':'—'} (${p3putt}/${all.length} huller)</span></div>
+    </div>
+    <span class="sec-label">Approach per afstandszone</span>
+    <div class="card">${appRows||'<span style="color:#999;font-size:13px">Ingen approach-data endnu</span>'}</div>
+    ${missKeys.length?`<span class="sec-label">Approach miss-retning</span>
+    <div class="card" style="padding-bottom:10px"><div style="position:relative;height:${missKeys.length*44+60}px"><canvas id="miss-chart" role="img" aria-label="Approach miss retning">Miss-retning</canvas></div></div>`:''}
+    ${teeKeys.length?`<span class="sec-label">Tee-slag fordeling</span>
+    <div class="card" style="padding-bottom:10px"><div style="position:relative;height:${teeKeys.length*44+60}px"><canvas id="tee-chart" role="img" aria-label="Tee-slag fordeling">Tee-slag</canvas></div></div>`:''}`;
+  setTimeout(()=>{
+    if(missKeys.length){charts['miss']=new Chart(document.getElementById('miss-chart'),{type:'bar',data:{labels:missKeys,datasets:[{label:'Miss',data:missKeys.map(k=>missDir[k]),backgroundColor:'#E24B4A',borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#999',stepSize:1}},y:{grid:{display:false},ticks:{color:'#555',font:{size:12}}}}}});}
+    if(teeKeys.length){const tCol={'fairway':'#3B6D11','rough-v':'#BA7517','rough-h':'#BA7517','bunker':'#E24B4A','ob':'#A32D2D','vand':'#185FA5'};charts['tee']=new Chart(document.getElementById('tee-chart'),{type:'bar',data:{labels:teeKeys,datasets:[{label:'Tee',data:teeKeys.map(k=>teeRes[k]),backgroundColor:teeKeys.map(k=>tCol[k]||'#888'),borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#999',stepSize:1}},y:{grid:{display:false},ticks:{color:'#555',font:{size:12}}}}}});}
+  },50);
+}
+
+// ── TIGER ─────────────────────────────────────────────────────────────────────
+function renderTiger(){
+  document.getElementById('tiger-loading').style.display='none';
+  document.getElementById('tiger-content').style.display='block';
+  if(!rounds.length){document.getElementById('tiger-content').innerHTML='<div class="empty-state"><h3>Ingen data endnu</h3></div>';return;}
+  const rn=rounds.length;
+  const totT={th:0,sp5:0,bi150:0,b2b:0,dbl:0,bb:0};
+  rounds.forEach(r=>{if(r.tiger)Object.keys(totT).forEach(k=>totT[k]+=(r.tiger[k]||0));});
+  const all=rounds.flatMap(r=>r.holes||[]);
+  const bogeys=all.filter(h=>h.score-h.par===1).length;
+  const b2bDetails=rounds.flatMap(r=>{const h=r.holes||[];return h.reduce((a,hole,i)=>{if(i>0&&(hole.score-hole.par)===1&&(h[i-1].score-h[i-1].par)===1)a.push({h1:h[i-1].hole,h2:hole.hole,course:r.course,date:r.date});return a;},[]);});
+  destroyCharts();
+  document.getElementById('tiger-content').innerHTML=`
+    <span class="sec-label">Tiger Metrics — ${rn} runde${rn>1?'r':''}</span>
+    <div class="g3" style="margin-bottom:20px">
+      <div class="metric"><div class="metric-val ${totT.th===0?'good':'bad'}">${totT.th}</div><div class="metric-lbl">3-putts</div><div class="metric-sub ${totT.th===0?'good':'bad'}">${(totT.th/rn).toFixed(1)}/runde</div></div>
+      <div class="metric"><div class="metric-val ${totT.sp5===0?'good':'bad'}">${totT.sp5}</div><div class="metric-lbl">6'ere på par 5</div><div class="metric-sub ${totT.sp5===0?'good':'bad'}">${(totT.sp5/rn).toFixed(1)}/runde</div></div>
+      <div class="metric"><div class="metric-val ${totT.bi150===0?'good':'bad'}">${totT.bi150}</div><div class="metric-lbl">Bogeys &lt;150m</div><div class="metric-sub ${totT.bi150===0?'good':'bad'}">${(totT.bi150/rn).toFixed(1)}/runde</div></div>
+      <div class="metric"><div class="metric-val ${totT.b2b===0?'good':'bad'}">${totT.b2b}</div><div class="metric-lbl">Back-to-back bogeys</div><div class="metric-sub ${totT.b2b===0?'good':'bad'}">${(totT.b2b/rn).toFixed(1)}/runde</div></div>
+      <div class="metric"><div class="metric-val ${totT.dbl===0?'good':'bad'}">${totT.dbl}</div><div class="metric-lbl">Doubles</div><div class="metric-sub ${totT.dbl===0?'good':'bad'}">${(totT.dbl/rn).toFixed(1)}/runde</div></div>
+      <div class="metric"><div class="metric-val ${totT.bb>0?'good':'bad'}">${totT.bb}</div><div class="metric-lbl">Bounce backs</div><div class="metric-sub ${totT.bb>0?'good':'bad'}">${bogeys>0?Math.round(totT.bb/bogeys*100)+'% af bogeys':'—'}</div></div>
+    </div>
+    ${rn>=2?`<span class="sec-label">Trend over runder</span>
+    <div class="card"><div style="position:relative;height:200px"><canvas id="tiger-trend" role="img" aria-label="Tiger Metrics trend">Tiger Metrics trend</canvas></div>
+    <div class="chart-legend" style="margin-top:10px">
+      <span><span class="legend-dot" style="background:#A32D2D"></span>3-putts</span>
+      <span><span class="legend-dot" style="background:#E24B4A"></span>Doubles</span>
+      <span><span class="legend-dot" style="background:#BA7517"></span>B2B bogeys</span>
+    </div></div>`:''}
+    ${b2bDetails.length?`<span class="sec-label">Back-to-back detaljer</span>
+    <div class="card">${b2bDetails.map(b=>`<div class="stat-row"><span class="stat-lbl">${b.course}${b.date?' · '+new Date(b.date).toLocaleDateString('da-DK',{day:'numeric',month:'short'}):''}</span><span class="stat-val">Hul ${b.h1} + ${b.h2}</span></div>`).join('')}</div>`:''}`;
+  if(rn>=2){
+    setTimeout(()=>{
+      const rev=[...rounds].reverse();
+      const labels=rev.map((r,i)=>r.date?new Date(r.date).toLocaleDateString('da-DK',{day:'numeric',month:'short'}):`R${i+1}`);
+      charts['tiger']=new Chart(document.getElementById('tiger-trend'),{type:'line',data:{labels,datasets:[{label:'3-putts',data:rev.map(r=>r.tiger?.th||0),borderColor:'#A32D2D',borderWidth:2,tension:.3,pointRadius:3,fill:false},{label:'Doubles',data:rev.map(r=>r.tiger?.dbl||0),borderColor:'#E24B4A',borderWidth:2,tension:.3,pointRadius:3,fill:false,borderDash:[5,5]},{label:'B2B',data:rev.map(r=>r.tiger?.b2b||0),borderColor:'#BA7517',borderWidth:2,tension:.3,pointRadius:3,fill:false,borderDash:[3,3]}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{min:0,grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#999',stepSize:1}},x:{grid:{display:false},ticks:{color:'#999',font:{size:11},autoSkip:false,maxRotation:45}}}}});
+    },50);
+  }
+}
+
+function destroyCharts(){Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}});charts={};}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+(async function init(){
+  const saved=localStorage.getItem('caddieiq_user');
+  if(saved){
+    try{currentUser=JSON.parse(saved);await loadRounds();startApp();}
+    catch(e){localStorage.removeItem('caddieiq_user');document.getElementById('login-screen').style.display='block';}
+  } else {
+    document.getElementById('login-screen').style.display='block';
+  }
+  document.getElementById('f-date').value=new Date().toISOString().split('T')[0];
+})();
+</script>
+</body>
+</html>
