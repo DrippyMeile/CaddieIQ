@@ -315,10 +315,15 @@ async function loadRounds(){
 
 // ── NAVIGATION ────────────────────────────────────────────────────────────────
 async function navTo(v){
+  // If clicking New Round while a round is in progress, resume it
+  if(v==='newround'&&roundDirty){
+    showView('newround');return;
+  }
+  // If navigating away from newround while dirty, confirm
   if(v!=='newround'&&roundDirty){
     const ok=await confirmDialog('Leave round?','You have unsaved data. Leave without saving?','Leave');
     if(!ok)return;
-    roundDirty=false;
+    roundDirty=false;hd=[];window._editId=null;resetCourseForm();showStep('info');
   }
   showView(v);
 }
@@ -350,7 +355,7 @@ const COURSES={
   old:{name:'The Scandinavian — Old Course',slope:132,cr:73.1,par:72,tee:'Yellow',
     pars:[4,5,4,4,3,4,4,3,5,5,4,3,4,3,4,3,5,5]},
   new:{name:'The Scandinavian — New Course',slope:151,cr:76.3,par:72,tee:'Yellow',
-    pars:[5,3,4,5,3,4,5,4,3,4,4,5,3,4,4,3,3,5]}
+    pars:[5,3,4,5,3,4,5,4,3,4,4,5,3,4,4,4,3,5]}
 };
 function selectCourse(key){
   const c=COURSES[key];
@@ -381,14 +386,33 @@ function newHole(par,i){
 // ── ENTRY FLOW ────────────────────────────────────────────────────────────────
 function cancelRound(){
   if(roundDirty){
-    confirmDialog('Leave round?','You have unsaved data. Leave without saving?','Leave').then(ok=>{
-      if(ok){roundDirty=false;showStep('info');showView('dashboard');}
+    confirmDialog('Discard round?','All data for this round will be lost.','Discard').then(ok=>{
+      if(ok){
+        roundDirty=false;hd=[];window._editId=null;
+        resetCourseForm();
+        showStep('info');showView('dashboard');
+      }
     });
-  } else {showStep('info');showView('dashboard');}
+  } else {
+    resetCourseForm();showStep('info');showView('dashboard');
+  }
+}
+
+function resetCourseForm(){
+  document.getElementById('f-course').value='';
+  document.getElementById('f-slope').value='';
+  document.getElementById('f-cr').value='';
+  document.getElementById('f-hcp').value='';
+  document.getElementById('f-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('qs-old').className='tb';
+  document.getElementById('qs-new').className='tb';
 }
 
 function startHoles(){
-  hd=PAR.map((par,i)=>newHole(par,i));
+  // Use preset pars if a course was selected, otherwise default
+  const selectedKey=document.getElementById('qs-old').classList.contains('g')?'old':document.getElementById('qs-new').classList.contains('g')?'new':null;
+  const pars=selectedKey?COURSES[selectedKey].pars:PAR;
+  hd=pars.map((par,i)=>newHole(par,i));
   roundDirty=true;
   showHoles(0);showStep('holes');
 }
