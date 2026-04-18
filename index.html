@@ -690,19 +690,6 @@ function setAct(btn,cls){
 }
 function calcAutoScore(h){
   const pen=h.penalty||0;
-
-  // Build up shot count step by step.
-  // Each penalty = the stroke that went wrong + 1 extra = net +1 to position
-  // (the original stroke already counted, penalty adds 1 more)
-
-  // ── Tee shot ──────────────────────────────────────────────────────────────
-  // Tee shot counts as stroke 1.
-  // If tee shot incurs penalty (OB/water from tee), that's +1 penalty
-  // so next stroke is stroke 3 (stroke 1 + stroke 2 re-tee + penalty counted).
-  // We track this simply: every penalty stroke means the player used an extra stroke.
-
-function calcAutoScore(h){
-  const pen=h.penalty||0;
   let s=0;
 
   if(h.par===3){
