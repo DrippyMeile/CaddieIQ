@@ -374,11 +374,13 @@ function selectCourse(key){
 
 // ── HOLE DATA ─────────────────────────────────────────────────────────────────
 const PAR=[4,3,5,4,4,3,5,4,4,4,3,5,4,4,3,5,4,4];
-const PD=['<1m','1–2m','2–3m','3–5m','5–10m','10–15m','>15m'];
+const PD=['<1m','1–2m','2–3m','3–4m','4–6m','6–9m','9–12m','>12m'];
 
 function newHole(par,i){
   return{hole:i+1,par,score:par,putts:2,gir:false,girPlus:false,
-    teeClub:null,teeMiss:null,approachDist:null,approachResult:null,
+    teeClub:null,teeMiss:null,
+    par5GoForIt:null,layupDist:null,
+    approachDist:null,approachResult:null,
     shortType:null,holedOut:false,upAndDown:null,firstPuttDist:null,
     penalty:0,penaltyReason:null};
 }
@@ -453,6 +455,7 @@ function mkHole(i){
     <div class="sdisp" id="sc-${i}" style="color:${scc(d)}">${h.score}</div>
     <button class="sbtn" data-action="as" data-i="${i}" data-d="1">+</button>
     <span style="font-size:13px;color:#999;min-width:56px" id="dl-${i}">${scl(d)}</span>
+    <span id="auto-${i}" style="font-size:10px;background:#E6F1FB;color:#0C447C;padding:2px 6px;border-radius:10px;font-weight:700;display:none">AUTO</span>
     <div style="display:flex;align-items:center;gap:5px;margin-left:auto">
       <span style="font-size:11px;color:#999">Putts</span>
       <button class="sbtn" style="width:28px;height:28px;font-size:13px" data-action="ap" data-i="${i}" data-d="-1">−</button>
@@ -513,17 +516,67 @@ function mkTeeRes(i){
 }
 function mkApDist(i){
   const h=hd[i];const w=document.createElement('div');
-  const l=document.createElement('span');l.className='fll';
-  l.textContent=h.par===5?'Approach distance (2nd or 3rd shot)':h.par===3?'Approach distance (tee shot)':'Approach distance';
-  w.appendChild(l);
-  const r=document.createElement('div');r.className='tbr';
-  [['<50m','<50'],['50–100m','50-100'],['100–150m','100-150'],['>150m','>150']].forEach(([lb,v])=>{
-    const b=document.createElement('button');
-    b.className='tb'+(h.approachDist===v?' b':'');
-    b.textContent=lb;b.dataset.action='sad';b.dataset.i=i;b.dataset.val=v;
-    r.appendChild(b);
-  });
-  w.appendChild(r);return w;
+
+  if(h.par===5){
+    // Step 1: Go for green in 2?
+    const l1=document.createElement('span');l1.className='fll';l1.textContent='Did you go for the green in 2?';w.appendChild(l1);
+    const r1=document.createElement('div');r1.className='tbr';
+    [{v:'true',c:'g',t:'Yes — went for it'},{v:'false',c:'on',t:'No — lay-up'}].forEach(o=>{
+      const b=document.createElement('button');
+      b.className='tb'+(String(h.par5GoForIt)===o.v?' '+o.c:'');
+      b.textContent=o.t;b.dataset.action='sp5gfi';b.dataset.i=i;b.dataset.val=o.v;
+      r1.appendChild(b);
+    });
+    w.appendChild(r1);
+
+    if(h.par5GoForIt===true){
+      // Going for green in 2 — show approach distance from that shot
+      const l2=document.createElement('span');l2.className='fll';l2.textContent='Approach distance (2nd shot)';w.appendChild(l2);
+      const r2=document.createElement('div');r2.className='tbr';
+      [['100–150m','100-150'],['150–200m','150-200'],['>200m','>200']].forEach(([lb,v])=>{
+        const b=document.createElement('button');
+        b.className='tb'+(h.approachDist===v?' b':'');
+        b.textContent=lb;b.dataset.action='sad';b.dataset.i=i;b.dataset.val=v;
+        r2.appendChild(b);
+      });
+      w.appendChild(r2);
+    } else if(h.par5GoForIt===false){
+      // Lay-up — show lay-up landing distance, then approach distance
+      const l2=document.createElement('span');l2.className='fll';l2.textContent='Lay-up distance from green';w.appendChild(l2);
+      const r2=document.createElement('div');r2.className='tbr';
+      [['<50m','<50'],['50–100m','50-100'],['100–150m','100-150']].forEach(([lb,v])=>{
+        const b=document.createElement('button');
+        b.className='tb'+(h.layupDist===v?' b':'');
+        b.textContent=lb;b.dataset.action='slayup';b.dataset.i=i;b.dataset.val=v;
+        r2.appendChild(b);
+      });
+      w.appendChild(r2);
+      // Approach after lay-up
+      const l3=document.createElement('span');l3.className='fll';l3.textContent='Approach distance (3rd shot)';w.appendChild(l3);
+      const r3=document.createElement('div');r3.className='tbr';
+      [['<50m','<50'],['50–100m','50-100'],['100–150m','100-150']].forEach(([lb,v])=>{
+        const b=document.createElement('button');
+        b.className='tb'+(h.approachDist===v?' b':'');
+        b.textContent=lb;b.dataset.action='sad';b.dataset.i=i;b.dataset.val=v;
+        r3.appendChild(b);
+      });
+      w.appendChild(r3);
+    }
+  } else {
+    // Par 3 or 4 — standard approach distance
+    const l=document.createElement('span');l.className='fll';
+    l.textContent=h.par===3?'Approach distance (tee shot)':'Approach distance';
+    w.appendChild(l);
+    const r=document.createElement('div');r.className='tbr';
+    [['<50m','<50'],['50–100m','50-100'],['100–150m','100-150'],['>150m','>150']].forEach(([lb,v])=>{
+      const b=document.createElement('button');
+      b.className='tb'+(h.approachDist===v?' b':'');
+      b.textContent=lb;b.dataset.action='sad';b.dataset.i=i;b.dataset.val=v;
+      r.appendChild(b);
+    });
+    w.appendChild(r);
+  }
+  return w;
 }
 function mkApRes(i){
   const h=hd[i];const w=document.createElement('div');
@@ -604,21 +657,40 @@ document.addEventListener('click',function(e){
   const btn=e.target.closest('[data-action]');if(!btn)return;
   const a=btn.dataset.action,i=parseInt(btn.dataset.i);
   if(a==='cpar'){const p=[3,4,5];hd[i].par=p[(p.indexOf(hd[i].par)+1)%3];rebuildHole(i);return;}
-  if(a==='as'){hd[i].score=Math.max(1,hd[i].score+parseInt(btn.dataset.d));updScore(i);return;}
-  if(a==='ap'){hd[i].putts=Math.max(0,hd[i].putts+parseInt(btn.dataset.d));document.getElementById('pt-'+i).textContent=hd[i].putts;return;}
-  if(a==='apen'){hd[i].penalty=Math.max(0,hd[i].penalty+parseInt(btn.dataset.d));rebuildHole(i);return;}
+  if(a==='as'){hd[i].score=Math.max(1,hd[i].score+parseInt(btn.dataset.d));updScore(i);const b=document.getElementById('auto-'+i);if(b)b.style.display='none';return;}
+  if(a==='ap'){hd[i].putts=Math.max(0,hd[i].putts+parseInt(btn.dataset.d));document.getElementById('pt-'+i).textContent=hd[i].putts;applyAutoScore(i);return;}
+  if(a==='apen'){hd[i].penalty=Math.max(0,hd[i].penalty+parseInt(btn.dataset.d));rebuildHole(i);applyAutoScore(i);return;}
   if(a==='sf'){hd[i][btn.dataset.key]=btn.dataset.val;setAct(btn,'on');return;}
-  if(a==='str'){hd[i].teeMiss=btn.dataset.val;setAct(btn,btn.dataset.cls);return;}
-  if(a==='sad'){hd[i].approachDist=btn.dataset.val;setAct(btn,'b');if(hd[i].approachResult==='Green'&&hd[i].par===5){hd[i].girPlus=['100-150','>150'].includes(btn.dataset.val);updGP(i);}return;}
+  if(a==='str'){hd[i].teeMiss=btn.dataset.val;setAct(btn,btn.dataset.cls);applyAutoScore(i);return;}
+  if(a==='sp5gfi'){
+    const v=btn.dataset.val==='true';
+    hd[i].par5GoForIt=v;
+    hd[i].approachDist=null;hd[i].layupDist=null;hd[i].girPlus=false;
+    setAct(btn,v?'g':'on');
+    rebuildHole(i);return;
+  }
+  if(a==='slayup'){hd[i].layupDist=btn.dataset.val;setAct(btn,'b');return;}
+  if(a==='sad'){
+    hd[i].approachDist=btn.dataset.val;setAct(btn,'b');
+    // GIR+ only when going for par5 in 2 from a long distance
+    if(hd[i].approachResult==='Green'&&hd[i].par===5&&hd[i].par5GoForIt===true){
+      hd[i].girPlus=['100-150','150-200','>200'].includes(btn.dataset.val);updGP(i);
+    }
+    return;
+  }
   if(a==='sar'){
     hd[i].approachResult=btn.dataset.val;
     const miss=['Short','Long','Left','Right','Bunker','Water'];
-    if(btn.dataset.val==='Green'){setAct(btn,'g');hd[i].gir=true;hd[i].girPlus=hd[i].par===5&&['100-150','>150'].includes(hd[i].approachDist);}
-    else if(miss.includes(btn.dataset.val)){setAct(btn,btn.dataset.cls);hd[i].gir=false;hd[i].girPlus=false;}
-    updGP(i);rebuildHole(i);return;
+    if(btn.dataset.val==='Green'){
+      setAct(btn,'g');hd[i].gir=true;
+      hd[i].girPlus=hd[i].par===5&&hd[i].par5GoForIt===true&&['100-150','150-200','>200'].includes(hd[i].approachDist);
+    } else if(miss.includes(btn.dataset.val)){
+      setAct(btn,btn.dataset.cls);hd[i].gir=false;hd[i].girPlus=false;
+    }
+    updGP(i);rebuildHole(i);applyAutoScore(i);return;
   }
-  if(a==='ho'){hd[i].holedOut=!hd[i].holedOut;if(hd[i].holedOut){hd[i].putts=0;hd[i].upAndDown=true;}else{hd[i].putts=1;}document.getElementById('pt-'+i).textContent=hd[i].putts;rebuildHole(i);return;}
-  if(a==='sud'){const v=btn.dataset.val==='true';hd[i].upAndDown=v;if(v&&hd[i].putts===2)hd[i].putts=1;document.getElementById('pt-'+i).textContent=hd[i].putts;setAct(btn,btn.dataset.cls);return;}
+  if(a==='ho'){hd[i].holedOut=!hd[i].holedOut;if(hd[i].holedOut){hd[i].putts=0;hd[i].upAndDown=true;}else{hd[i].putts=1;}document.getElementById('pt-'+i).textContent=hd[i].putts;rebuildHole(i);applyAutoScore(i);return;}
+  if(a==='sud'){const v=btn.dataset.val==='true';hd[i].upAndDown=v;if(v&&hd[i].putts===2)hd[i].putts=1;document.getElementById('pt-'+i).textContent=hd[i].putts;setAct(btn,btn.dataset.cls);applyAutoScore(i);return;}
   if(a==='spd'){hd[i].firstPuttDist=btn.dataset.val;setAct(btn,'b');return;}
   if(a==='close-modal'){document.getElementById('round-modal').classList.remove('open');return;}
 });
@@ -627,6 +699,95 @@ function setAct(btn,cls){
   const p=btn.closest('.tbr,.pdg');if(p)p.querySelectorAll('.tb').forEach(b=>b.className='tb');
   btn.className='tb '+cls;
 }
+function calcAutoScore(h){
+  const pen=h.penalty||0;
+
+  // Build up shot count step by step.
+  // Each penalty = the stroke that went wrong + 1 extra = net +1 to position
+  // (the original stroke already counted, penalty adds 1 more)
+
+  // ── Tee shot ──────────────────────────────────────────────────────────────
+  // Tee shot counts as stroke 1.
+  // If tee shot incurs penalty (OB/water from tee), that's +1 penalty
+  // so next stroke is stroke 3 (stroke 1 + stroke 2 re-tee + penalty counted).
+  // We track this simply: every penalty stroke means the player used an extra stroke.
+
+  let s=0; // strokes used so far
+
+  if(h.par===3){
+    // Tee shot IS the approach
+    s=1+pen; // tee + any penalty strokes
+    if(h.approachResult==='Green'||h.gir){
+      if(h.holedOut) return s; // ace or holed approach
+      s+=h.putts;
+    } else if(h.approachResult){
+      if(h.holedOut) return s+1; // holed the chip
+      s+=1+h.putts; // 1 short game + putts
+    } else {
+      return null;
+    }
+
+  } else if(h.par===4){
+    s=1; // tee shot
+    // Penalty on tee shot (OB/water)
+    if(h.teeMiss==='OB'||h.teeMiss==='Water') s+=pen;
+    s+=1; // approach shot
+    if(h.approachResult==='Green'||h.gir){
+      s+=h.putts;
+    } else if(h.approachResult){
+      if(h.holedOut) return s+1;
+      s+=1+h.putts;
+    } else {
+      return null;
+    }
+
+  } else if(h.par===5){
+    if(h.par5GoForIt===null) return null;
+    s=1; // tee shot
+    if(h.teeMiss==='OB'||h.teeMiss==='Water') s+=pen;
+
+    if(h.par5GoForIt===true){
+      s+=1; // approach shot (going for green in 2)
+      if(h.approachResult==='Green'||h.gir){
+        s+=h.putts;
+      } else if(h.approachResult){
+        if(h.holedOut) return s+1;
+        s+=1+h.putts;
+      } else {
+        return null;
+      }
+    } else {
+      // Lay-up
+      s+=1; // lay-up shot
+      s+=1; // approach shot (3rd shot)
+      if(h.approachResult==='Green'||h.gir){
+        s+=h.putts;
+      } else if(h.approachResult){
+        if(h.holedOut) return s+1;
+        s+=1+h.putts;
+      } else {
+        return null;
+      }
+    }
+    // Water/OB on approach or lay-up (non-tee penalty)
+    if(h.teeMiss!=='OB'&&h.teeMiss!=='Water') s+=pen;
+  }
+
+  return Math.max(1,s);
+}
+
+function applyAutoScore(i){
+  const h=hd[i];
+  const auto=calcAutoScore(h);
+  if(auto===null)return;
+  hd[i].score=Math.max(1,auto);
+  updScore(i);
+  const badge=document.getElementById('auto-'+i);
+  if(badge){badge.style.display='inline';}
+  const el=document.getElementById('sc-'+i);
+  if(el){el.style.transition='background .15s';el.style.background='#E6F1FB';setTimeout(()=>{el.style.background='';},350);}
+}
+
 function updScore(i){const d=hd[i].score-hd[i].par;document.getElementById('sc-'+i).textContent=hd[i].score;document.getElementById('sc-'+i).style.color=scc(d);document.getElementById('dl-'+i).textContent=scl(d);}
 function updGP(i){
   const el=document.getElementById('gp-'+i);if(!el)return;
